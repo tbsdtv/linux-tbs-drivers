@@ -38,6 +38,10 @@
 static unsigned int verbose;
 module_param(verbose, int, 0644);
 
+static int tsout = 1;
+module_param(tsout, int, 0644);
+MODULE_PARM_DESC(tsout, "Output data 1=TS, 0=BB (default:1)");
+
 /* internal params node */
 struct stv090x_dev {
 	/* pointer for internal params, one for each pair of demods */
@@ -3166,6 +3170,40 @@ err:
 	return -1;
 }
 
+/* Set data output format of Transport Stream Merger.
+ * This function configures the packet delineator and the stream merger units
+ * of the STV0900 for frame (Base-band frame) or packet (Transport Stream) output.
+ */
+static int stv090x_set_dfmt(struct stv090x_state *state, fe_data_format_t dfmt)
+{
+	u32 reg;
+
+	// Px_PDELCTRL2: Packet delineator additional configuration
+	switch(dfmt)
+	{
+		case FE_DFMT_TS_PACKET:
+			reg = STV090x_READ_DEMOD(state, PDELCTRL2);
+			STV090x_SETFIELD_Px(reg, FRAME_MODE_FIELD, 0);
+			if (STV090x_WRITE_DEMOD(state, PDELCTRL2, reg) < 0)
+				goto err;
+			break;
+		case FE_DFMT_BB_FRAME:
+			reg = STV090x_READ_DEMOD(state, PDELCTRL2);
+			STV090x_SETFIELD_Px(reg, FRAME_MODE_FIELD, 1);
+			if (STV090x_WRITE_DEMOD(state, PDELCTRL2, reg) < 0)
+				goto err;
+			break;
+		default:
+			dprintk(FE_ERROR, 1, "Invalid data format %d", dfmt);
+			goto err;
+	}
+	
+	//
+	return 0;
+err:
+	dprintk(FE_ERROR, 1, "Failed to set FE data format");
+	return -1;
+}
 
 static enum stv090x_signal_state stv090x_algo(struct stv090x_state *state)
 {
@@ -3483,6 +3521,15 @@ static enum dvbfe_search stv090x_search(struct dvb_frontend *fe, struct dvb_fron
 
 	if (p->frequency == 0)
 		return DVBFE_ALGO_SEARCH_INVALID;
+
+	if (tsout == 0) { /* bb mode enabled */
+		//if(stv090x_set_dfmt(state, props->dfmt) != 0)
+		if(stv090x_set_dfmt(state, FE_DFMT_BB_FRAME) != 0)
+			return DVBFE_ALGO_SEARCH_ERROR;
+	} else {
+		if(stv090x_set_dfmt(state, FE_DFMT_TS_PACKET) != 0)
+			return DVBFE_ALGO_SEARCH_ERROR;
+	}
 
 	state->delsys = props->delivery_system;
 	state->frequency = p->frequency;

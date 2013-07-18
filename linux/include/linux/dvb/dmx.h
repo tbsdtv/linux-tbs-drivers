@@ -141,6 +141,52 @@ struct dmx_stc {
 	__u64 stc;		/* output: stc in 'base'*90 kHz units */
 };
 
+/**
+ * Base-band filter output types.
+ */
+typedef enum {
+	/// Only deliver Transport Stream packets received with frames using TS compatibility mode
+	DMX_BB_TSCOMPAT = 0,
+	/// Output raw BBFrames
+	DMX_BB_FRAME,
+	/// Only deliver generic continuous stream data (not including BBFrame header)
+	DMX_BB_CONT,
+	/// Only deliver generic packetized stream data (not including BBFrame header)
+	DMX_BB_PACK
+} dmx_bb_type_t;
+
+/**
+ * @brief Special ISI value for receiving only SIS-mode streams.
+ * @note this filter wont deliver any data if the channel uses multiple 
+ * input stream mode (MIS-mode),
+ */
+#define DMX_ISI_SIS	-1
+/**
+ * @brief Special ISI value for receiving all available input sreams.
+ * @note This value is only allowed for base-band filter type DMX_BB_FRAME
+ */
+#define DMX_ISI_ALL	-2
+
+struct dmx_bb_filter_params
+{
+	/**
+	 * @brief Identifies a single base-band stream multiplexed on a single channel.
+	 * This may be an input stream for DVB-S2 or a physical layer pipe (PLP) in the case
+	 * of DVB-T2.
+	 */
+	__s16		isi;
+	dmx_input_t	input;
+	/**
+	 * @brief Tells the filter where the data should be routed to (e.g. dvr device or 
+	 * demux file handle.
+	 */
+	dmx_output_t	output;
+	/**
+	 * @brief Specifies what type of data should be delivered by this filter.
+	 */
+	dmx_bb_type_t	type;
+	__u32		flags;
+};
 
 #define DMX_START                _IO('o', 41)
 #define DMX_STOP                 _IO('o', 42)
@@ -153,5 +199,6 @@ struct dmx_stc {
 #define DMX_GET_STC              _IOWR('o', 50, struct dmx_stc)
 #define DMX_ADD_PID              _IOW('o', 51, __u16)
 #define DMX_REMOVE_PID           _IOW('o', 52, __u16)
+#define DMX_SET_BB_FILTER       _IOW('o', 53, struct dmx_bb_filter_params)
 
 #endif /*_DVBDMX_H_*/

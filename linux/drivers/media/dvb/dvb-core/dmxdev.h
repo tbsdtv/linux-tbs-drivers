@@ -43,6 +43,7 @@ enum dmxdev_type {
 	DMXDEV_TYPE_NONE,
 	DMXDEV_TYPE_SEC,
 	DMXDEV_TYPE_PES,
+	DMXDEV_TYPE_BB
 };
 
 enum dmxdev_state {
@@ -69,11 +70,13 @@ struct dmxdev_filter {
 		/* list of TS and PES feeds (struct dmxdev_feed) */
 		struct list_head ts;
 		struct dmx_section_feed *sec;
+		struct dmx_bb_feed *bb;
 	} feed;
 
 	union {
 		struct dmx_sct_filter_params sec;
 		struct dmx_pes_filter_params pes;
+		struct dmx_bb_filter_params bb;
 	} params;
 
 	enum dmxdev_type type;

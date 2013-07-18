@@ -173,6 +173,32 @@ struct dmx_section_feed {
 };
 
 /*--------------------------------------------------------------------------*/
+/* Base-band frame reception */
+/*--------------------------------------------------------------------------*/
+
+/// @brief Deliver full BBFrames (incl. header) to demux feed (default)
+#define BB_FRAME	0x01
+/// @brief Deliver Packetized Generic Stream to demux feed
+#define BB_PACK_GS	0x00
+/// @brief Deliver Continues Generic Stream to demux feed
+#define BB_CONT_GS	0x40		
+/// @brief Deliver Transport Stream (if stream is using TS-Compatibility mode) to demux feed
+#define BB_TS		0xc0
+
+#define BB_ISI_ALL	DMX_ISI_ALL
+#define BB_ISI_SIS	DMX_ISI_SIS
+
+struct dmx_bb_feed {
+	int is_filtering; /* Set to non-zero when filtering in progress */
+	struct dmx_demux *parent; /* Back-pointer */
+	void *priv; /* Pointer to private data of the API client */
+	int (*set) (struct dmx_bb_feed *feed, int isi, int type, 
+		size_t circular_buffer_size, struct timespec timeout);
+	int (*start_filtering) (struct dmx_bb_feed* feed);
+	int (*stop_filtering) (struct dmx_bb_feed* feed);
+};
+
+/*--------------------------------------------------------------------------*/
 /* Callback functions */
 /*--------------------------------------------------------------------------*/
 
@@ -189,6 +215,9 @@ typedef int (*dmx_section_cb) (	const u8 * buffer1,
 				size_t buffer2_len,
 				struct dmx_section_filter * source,
 				enum dmx_success success);
+
+typedef void (*dmx_bb_cb)(const u8 *buffer, size_t len, size_t upl, 
+	struct dmx_bb_feed* source, enum dmx_success success);
 
 /*--------------------------------------------------------------------------*/
 /* DVB Front-End */
@@ -258,6 +287,11 @@ struct dmx_demux {
 				      dmx_section_cb callback);
 	int (*release_section_feed) (struct dmx_demux* demux,
 				     struct dmx_section_feed* feed);
+	int (*allocate_bb_feed) (struct dmx_demux* demux,
+				 struct dmx_bb_feed** feed,
+				 dmx_bb_cb callback);
+	int (*release_bb_feed) (struct dmx_demux* demux,
+				struct dmx_bb_feed* feed);
 	int (*add_frontend) (struct dmx_demux* demux,
 			     struct dmx_frontend* frontend);
 	int (*remove_frontend) (struct dmx_demux* demux,

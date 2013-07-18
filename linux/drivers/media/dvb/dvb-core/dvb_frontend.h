@@ -342,6 +342,7 @@ struct dtv_frontend_properties {
 
 	fe_delivery_system_t	delivery_system;
 
+
 	/* ISDB-T specifics */
 	u8			isdbt_partial_reception;
 	u8			isdbt_sb_mode;

@@ -102,6 +102,10 @@ static unsigned int enable_ir = 1;
 module_param(enable_ir, int, 0644);
 MODULE_PARM_DESC(enable_ir, "Enable IR support for TBS cards: default 1");
 
+static int tsout = 1;
+module_param(tsout, int, 0644);
+MODULE_PARM_DESC(tsout, "TBS 6925 output format 1=TS, 0=BB (default:1)");
+
 #define DRIVER_NAME "SAA716x TBS"
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 8, 0)
@@ -512,7 +516,11 @@ static irqreturn_t saa716x_tbs6925_pci_irq(int irq, void *dev_id)
 				u8 * data = (u8 *)saa716x->fgpi[3].dma_buf[activeBuffer].mem_virt;
 				dprintk(SAA716x_DEBUG, 1, "%02X%02X%02X%02X",
 					data[0], data[1], data[2], data[3]);
-				dvb_dmx_swfilter_packets(&saa716x->saa716x_adap[0].demux, data, 348);
+				if (tsout == 0)
+					dvb_dmx_swfilter_data(&saa716x->saa716x_adap[0].demux, 
+									FE_DFMT_BB_FRAME, data, 348*188);
+				else
+					dvb_dmx_swfilter_packets(&saa716x->saa716x_adap[0].demux, data, 348);
 			}
 			if (fgpiStatus) {
 				SAA716x_EPWR(FGPI3, INT_CLR_STATUS, fgpiStatus);

@@ -28,11 +28,14 @@
 #include <linux/spinlock.h>
 #include <linux/mutex.h>
 
+#include <linux/dvb/frontend.h>
+
 #include "demux.h"
 
 #define DMX_TYPE_TS  0
 #define DMX_TYPE_SEC 1
 #define DMX_TYPE_PES 2
+#define DMX_TYPE_BB  3
 
 #define DMX_STATE_FREE      0
 #define DMX_STATE_ALLOCATED 1
@@ -68,11 +71,13 @@ struct dvb_demux_feed {
 	union {
 		struct dmx_ts_feed ts;
 		struct dmx_section_feed sec;
+		struct dmx_bb_feed bb;
 	} feed;
 
 	union {
 		dmx_ts_cb ts;
 		dmx_section_cb sec;
+		dmx_bb_cb bb;
 	} cb;
 
 	struct dvb_demux *demux;
@@ -93,6 +98,21 @@ struct dvb_demux_feed {
 	int pusi_seen;		/* prevents feeding of garbage from previous section */
 
 	u16 peslen;
+
+	/* Data for the Base-band demux */
+	struct {
+		/// Input Stream Identifier. A value of -1 indicates Single Input Stream operation
+		int isi;
+		/// Feed type (BB_FRAME, BB_PACK_GS, BB_CONT_GS or BB_TS)
+		u8 type;
+		/// Position in buffer (feed->buffer)
+		unsigned int bufpos;
+		/**
+		 * This is the offset of the last packet in the buffer which needs CRC validation.
+		 * @note All packets in the buffer with offsets < crcpos have already been validated.
+		 */
+		unsigned int crcpos;
+	} bb;
 
 	struct list_head list_head;
 	unsigned int index;	/* a unique index for each feed (can be used as hardware pid filter index) */
@@ -129,6 +149,16 @@ struct dvb_demux {
 	u8 tsbuf[204];
 	int tsbufp;
 
+
+	/**
+	 * Members which are specific to the BB-Demux 
+	 */
+	struct {
+#define DMX_BB_BUFSZ	8192
+		u8 *buf;
+		unsigned int wr;
+	} bb;
+
 	struct mutex mutex;
 	spinlock_t lock;
 
@@ -145,5 +175,17 @@ void dvb_dmx_swfilter_packets(struct dvb_demux *dvbdmx, const u8 *buf,
 void dvb_dmx_swfilter(struct dvb_demux *demux, const u8 *buf, size_t count);
 void dvb_dmx_swfilter_204(struct dvb_demux *demux, const u8 *buf,
 			  size_t count);
+/**
+ * Pass a single Base-band frame (BBFrame) to the demultiplexer
+ * @param demux Pointer to DVB demux context
+ * @param frame Buffer containing the full BBFrame
+ * @param len Length of the BBFrame in \c frame
+ * @return The length of the BBFrame or a value < 0 in case of an error
+ * @note This function MUST NOT be call from inside a feed callback
+ */
+ssize_t dvb_dmx_swfilter_bbframe(struct dvb_demux *demux, const u8 *frame, size_t len);
+
+void dvb_dmx_swfilter_data(struct dvb_demux *demux, fe_data_format_t dfmt, 
+	const u8 *data, size_t len);
 
 #endif /* _DVB_DEMUX_H_ */

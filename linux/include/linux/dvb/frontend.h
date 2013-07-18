@@ -359,6 +359,14 @@ typedef enum fe_delivery_system {
 /* backward compatibility */
 #define SYS_DVBC_ANNEX_AC	SYS_DVBC_ANNEX_A
 
+/*
+ * Format of data transferred from DVB adapter (frontend) to host.
+*/
+typedef enum fe_data_format {
+	FE_DFMT_TS_PACKET,
+	FE_DFMT_BB_FRAME
+} fe_data_format_t;
+
 struct dtv_cmds_h {
 	char	*name;		/* A display name for debugging purposes */
 
