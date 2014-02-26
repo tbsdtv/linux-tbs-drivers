@@ -14,10 +14,6 @@
 #include "tbs5220fe.h"
 #include "tbs5220ctrl.h"
 
-#ifndef USB_PID_TBS5220
-#define USB_PID_TBS5220 0x5220
-#endif
-
 #define TBS5220_READ_MSG 0
 #define TBS5220_WRITE_MSG 1
 
@@ -293,14 +289,13 @@ static int tbs5220_load_firmware(struct usb_device *dev,
 	int ret = 0, i;
 	u8 reset;
 	const struct firmware *fw;
-	const char *filename = "dvb-usb-tbsqbox-id5220.fw";
 	switch (dev->descriptor.idProduct) {
-	case 0xdc02:
-		ret = request_firmware(&fw, filename, &dev->dev);
+	case 0x5220:
+		ret = request_firmware(&fw, tbs5220_properties.firmware, &dev->dev);
 		if (ret != 0) {
 			err("did not find the firmware file. (%s) "
 			"Please see linux/Documentation/dvb/ for more details "
-			"on firmware-problems.", filename);
+			"on firmware-problems.", tbs5220_properties.firmware);
 			return ret;
 		}
 		break;

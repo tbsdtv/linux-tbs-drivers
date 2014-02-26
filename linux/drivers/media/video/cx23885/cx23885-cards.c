@@ -54,6 +54,11 @@ static unsigned int enable_tbs_ir = 1;
 module_param(enable_tbs_ir, int, 0644);
 MODULE_PARM_DESC(enable_tbs_ir,
 		 "Enable IR support for TBS cards (default:1)\n");
+		 
+static unsigned int enable_tbs_888_ir;
+module_param(enable_tbs_888_ir, int, 0644);
+MODULE_PARM_DESC(enable_tbs_888_ir,
+		 "Enable IR support for TBS cards with CX2388[58] IR (default:0)\n");
 
 /* ------------------------------------------------------------------ */
 /* board config info                                                  */
@@ -224,6 +229,10 @@ struct cx23885_board cx23885_boards[] = {
 	},
 	[CX23885_BOARD_TBS_6921] = {
 		.name		= "TurboSight TBS 6921",
+		.portb		= CX23885_MPEG_DVB,
+	},
+	[CX23885_BOARD_TBS_6925C] = {
+		.name		= "TurboSight TBS 6925C",
 		.portb		= CX23885_MPEG_DVB,
 	},
 	[CX23885_BOARD_TBS_6980] = {
@@ -537,6 +546,10 @@ struct cx23885_subid cx23885_subids[] = {
 		.subvendor = 0x6921,
 		.subdevice = 0x8888,
 		.card      = CX23885_BOARD_TBS_6921,
+	}, {
+		.subvendor = 0x6925,
+		.subdevice = 0x8888,
+		.card      = CX23885_BOARD_TBS_6925C,
 	}, {
 		.subvendor = 0x6980,
 		.subdevice = 0x8888,
@@ -1065,6 +1078,7 @@ void cx23885_gpio_setup(struct cx23885_dev *dev)
 		break;
 	case CX23885_BOARD_TBS_6920:
 	case CX23885_BOARD_TBS_6921:
+	case CX23885_BOARD_TBS_6925C:
 	case CX23885_BOARD_TBS_6980:
 	case CX23885_BOARD_TBS_6981:
 		cx_write(MC417_CTL, 0x00000036);
@@ -1392,6 +1406,16 @@ int cx23885_ir_init(struct cx23885_dev *dev)
 		v4l2_subdev_call(dev->sd_cx25840, core, s_io_pin_config,
 				 ir_rx_pin_cfg_count, ir_rx_pin_cfg);
 		break;
+	case CX23885_BOARD_TBS_6925C:
+		if (!enable_tbs_888_ir)
+			break;
+		ret = cx23888_ir_probe(dev);
+		if (ret)
+			break;
+		dev->sd_ir = cx23885_find_hw(dev, CX23885_HW_888_IR);
+		v4l2_subdev_call(dev->sd_cx25840, core, s_io_pin_config,
+				 ir_rx_pin_cfg_count, ir_rx_pin_cfg);
+		break;
 	case CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP:
 		request_module("ir-kbd-i2c");
 		break;
@@ -1406,6 +1430,7 @@ void cx23885_ir_fini(struct cx23885_dev *dev)
 	case CX23885_BOARD_HAUPPAUGE_HVR1270:
 	case CX23885_BOARD_HAUPPAUGE_HVR1850:
 	case CX23885_BOARD_HAUPPAUGE_HVR1290:
+	case CX23885_BOARD_TBS_6925C:
 		cx23885_irq_remove(dev, PCI_MSK_IR);
 		cx23888_ir_remove(dev);
 		dev->sd_ir = NULL;
@@ -1462,6 +1487,7 @@ void cx23885_ir_pci_int_enable(struct cx23885_dev *dev)
 	case CX23885_BOARD_HAUPPAUGE_HVR1270:
 	case CX23885_BOARD_HAUPPAUGE_HVR1850:
 	case CX23885_BOARD_HAUPPAUGE_HVR1290:
+	case CX23885_BOARD_TBS_6925C:
 		if (dev->sd_ir)
 			cx23885_irq_add_enable(dev, PCI_MSK_IR);
 		break;
@@ -1558,6 +1584,7 @@ void cx23885_card_setup(struct cx23885_dev *dev)
 		break;
 	case CX23885_BOARD_TBS_6920:
 	case CX23885_BOARD_TBS_6921:
+	case CX23885_BOARD_TBS_6925C:
 		ts1->gen_ctrl_val  = 0x4; /* Parallel */
 		ts1->ts_clk_en_val = 0x1; /* Enable TS_CLK */
 		ts1->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
@@ -1678,6 +1705,7 @@ void cx23885_card_setup(struct cx23885_dev *dev)
 	case CX23885_BOARD_PROF_8000:
 	case CX23885_BOARD_TBS_6920:
 	case CX23885_BOARD_TBS_6921:
+	case CX23885_BOARD_TBS_6925C:
 	case CX23885_BOARD_TBS_6980:
 	case CX23885_BOARD_TBS_6981:
 		dev->sd_cx25840 = v4l2_i2c_new_subdev(&dev->v4l2_dev,

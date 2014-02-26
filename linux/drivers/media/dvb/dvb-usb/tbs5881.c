@@ -16,10 +16,6 @@
 
 #include "dvb_ca_en50221.h"
 
-#ifndef USB_PID_TBS5881
-#define USB_PID_TBS5881 0x5881
-#endif
-
 #define TBS5881_READ_MSG 0
 #define TBS5881_WRITE_MSG 1
 
@@ -623,14 +619,13 @@ static int tbs5881_load_firmware(struct usb_device *dev,
 	int ret = 0, i;
 	u8 reset;
 	const struct firmware *fw;
-	const char *filename = "dvb-usb-tbsqbox-id5881.fw";
 	switch (dev->descriptor.idProduct) {
 	case 0x5881:
-		ret = request_firmware(&fw, filename, &dev->dev);
+		ret = request_firmware(&fw, tbs5881_properties.firmware, &dev->dev);
 		if (ret != 0) {
 			err("did not find the firmware file. (%s) "
 			"Please see linux/Documentation/dvb/ for more details "
-			"on firmware-problems.", filename);
+			"on firmware-problems.", tbs5881_properties.firmware);
 			return ret;
 		}
 		break;

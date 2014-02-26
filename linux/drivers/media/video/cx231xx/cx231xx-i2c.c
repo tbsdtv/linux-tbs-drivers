@@ -35,25 +35,6 @@ static unsigned int i2c_scan;
 module_param(i2c_scan, int, 0444);
 MODULE_PARM_DESC(i2c_scan, "scan i2c bus at insmod time");
 
-static unsigned int i2c_debug;
-module_param(i2c_debug, int, 0644);
-MODULE_PARM_DESC(i2c_debug, "enable debug messages [i2c]");
-
-#define dprintk1(lvl, fmt, args...)			\
-do {							\
-	if (i2c_debug >= lvl) {				\
-		printk(fmt, ##args);			\
-		}					\
-} while (0)
-
-#define dprintk2(lvl, fmt, args...)			\
-do {							\
-	if (i2c_debug >= lvl) {				\
-		printk(KERN_DEBUG "%s at %s: " fmt,	\
-		       dev->name, __func__ , ##args);	\
-      } 						\
-} while (0)
-
 static inline bool is_tuner(struct cx231xx *dev, struct cx231xx_i2c *bus,
 			const struct i2c_msg *msg, int tuner_type)
 {
@@ -118,9 +99,6 @@ int cx231xx_i2c_send_bytes(struct i2c_adapter *i2c_adap,
 			}
 
 			if (need_gpio) {
-				dprintk1(1,
-				"GPIO WRITE: addr 0x%x, len %d, saddr 0x%x\n",
-				msg->addr, msg->len, saddr);
 
 				return dev->cx231xx_gpio_i2c_write(dev,
 								   msg->addr,
@@ -162,18 +140,50 @@ int cx231xx_i2c_send_bytes(struct i2c_adapter *i2c_adap,
 		bus->i2c_nostop = 0;
 		bus->i2c_reserve = 0;
 
-	} else {		/* regular case */
+	} else {	/* regular case */
 
-		/* prepare xfer_data struct */
-		req_data.dev_addr = msg->addr;
-		req_data.direction = msg->flags;
-		req_data.saddr_len = 0;
-		req_data.saddr_dat = 0;
-		req_data.buf_size = msg->len;
-		req_data.p_buffer = msg->buf;
+		if (bus->nr == 2) {
+			size = msg->len;
+			buf_ptr = (u8 *) msg->buf;
+			do {
+				/* prepare xfer_data struct */
+				req_data.dev_addr = msg->addr;
+				req_data.direction = msg->flags;
+				req_data.saddr_len = 0;
+				req_data.saddr_dat = 0;
+				req_data.buf_size = size > 4  ? 4 : size;
+				req_data.p_buffer = (u8 *) (buf_ptr + loop * 4);
 
-		/* usb send command */
-		status = dev->cx231xx_send_usb_command(bus, &req_data);
+				bus->i2c_nostop = (size > 4) ? 1 : 0;
+				bus->i2c_reserve = (loop == 0) ? 0 : 1;
+
+				/* usb send command */
+				status = dev->cx231xx_send_usb_command(bus, &req_data);
+				loop++;
+
+				if (size >= 4)
+					size -= 4;
+				else
+					size = 0;
+
+			} while (size > 0);
+			
+			bus->i2c_nostop = 0;
+			bus->i2c_reserve = 0;
+			
+		} else {
+
+			/* prepare xfer_data struct */
+			req_data.dev_addr = msg->addr;
+			req_data.direction = msg->flags;
+			req_data.saddr_len = 0;
+			req_data.saddr_dat = 0;
+			req_data.buf_size = msg->len;
+			req_data.p_buffer = msg->buf;
+
+			/* usb send command */
+			status = dev->cx231xx_send_usb_command(bus, &req_data);
+		}
 	}
 
 	return status < 0 ? status : 0;
@@ -203,8 +213,6 @@ static int cx231xx_i2c_recv_bytes(struct i2c_adapter *i2c_adap,
 
 			switch (saddr) {
 			case 0x0009:	/* BUSY check */
-				dprintk1(1,
-				"GPIO R E A D: Special case BUSY check \n");
 				/*Try read BUSY register, just set it to zero*/
 				msg->buf[0] = 0;
 				if (msg->len == 2)
@@ -219,11 +227,6 @@ static int cx231xx_i2c_recv_bytes(struct i2c_adapter *i2c_adap,
 			if (need_gpio) {
 				/* this is a special case to handle Xceive tuner
 				clock stretch issue with gpio based I2C */
-
-				dprintk1(1,
-				"GPIO R E A D: addr 0x%x, len %d, saddr 0x%x\n",
-				msg->addr, msg->len,
-				msg->buf[0] << 8 | msg->buf[1]);
 
 				status =
 				    dev->cx231xx_gpio_i2c_write(dev, msg->addr,
@@ -287,10 +290,6 @@ static int cx231xx_i2c_recv_bytes_with_saddr(struct i2c_adapter *i2c_adap,
 
 	if (is_tuner(dev, bus, msg2, TUNER_XC5000)) {
 		if ((msg2->len < 16)) {
-
-			dprintk1(1,
-			"i2c_read: addr 0x%x, len %d, saddr 0x%x, len %d\n",
-			msg2->addr, msg2->len, saddr, msg1->len);
 
 			switch (saddr) {
 			case 0x0008:	/* read FW load status */
@@ -364,7 +363,7 @@ static int cx231xx_i2c_xfer(struct i2c_adapter *i2c_adap,
 {
 	struct cx231xx_i2c *bus = i2c_adap->algo_data;
 	struct cx231xx *dev = bus->dev;
-	int addr, rc, i, byte;
+	int addr, rc, i;
 
 	if (num <= 0)
 		return 0;
@@ -373,14 +372,10 @@ static int cx231xx_i2c_xfer(struct i2c_adapter *i2c_adap,
 
 		addr = msgs[i].addr >> 1;
 
-		dprintk2(2, "%s %s addr=%x len=%d:",
-			 (msgs[i].flags & I2C_M_RD) ? "read" : "write",
-			 i == num - 1 ? "stop" : "nonstop", addr, msgs[i].len);
 		if (!msgs[i].len) {
 			/* no len: check only for device presence */
 			rc = cx231xx_i2c_check_for_device(i2c_adap, &msgs[i]);
 			if (rc < 0) {
-				dprintk2(2, " no device\n");
 				mutex_unlock(&dev->i2c_lock);
 				return rc;
 			}
@@ -388,10 +383,6 @@ static int cx231xx_i2c_xfer(struct i2c_adapter *i2c_adap,
 		} else if (msgs[i].flags & I2C_M_RD) {
 			/* read bytes */
 			rc = cx231xx_i2c_recv_bytes(i2c_adap, &msgs[i]);
-			if (i2c_debug >= 2) {
-				for (byte = 0; byte < msgs[i].len; byte++)
-					printk(" %02x", msgs[i].buf[byte]);
-			}
 		} else if (i + 1 < num && (msgs[i + 1].flags & I2C_M_RD) &&
 			   msgs[i].addr == msgs[i + 1].addr
 			   && (msgs[i].len <= 2) && (bus->nr < 3)) {
@@ -399,28 +390,17 @@ static int cx231xx_i2c_xfer(struct i2c_adapter *i2c_adap,
 			rc = cx231xx_i2c_recv_bytes_with_saddr(i2c_adap,
 							       &msgs[i],
 							       &msgs[i + 1]);
-			if (i2c_debug >= 2) {
-				for (byte = 0; byte < msgs[i].len; byte++)
-					printk(" %02x", msgs[i].buf[byte]);
-			}
 			i++;
 		} else {
 			/* write bytes */
-			if (i2c_debug >= 2) {
-				for (byte = 0; byte < msgs[i].len; byte++)
-					printk(" %02x", msgs[i].buf[byte]);
-			}
 			rc = cx231xx_i2c_send_bytes(i2c_adap, &msgs[i]);
 		}
 		if (rc < 0)
 			goto err;
-		if (i2c_debug >= 2)
-			printk("\n");
 	}
 	mutex_unlock(&dev->i2c_lock);
 	return num;
 err:
-	dprintk2(2, " ERROR: %i\n", rc);
 	mutex_unlock(&dev->i2c_lock);
 	return rc;
 }

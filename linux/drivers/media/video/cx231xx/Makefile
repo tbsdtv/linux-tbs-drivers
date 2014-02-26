@@ -6,7 +6,8 @@ cx231xx-alsa-objs := cx231xx-audio.o
 
 obj-$(CONFIG_VIDEO_CX231XX) += cx231xx.o
 obj-$(CONFIG_VIDEO_CX231XX_ALSA) += cx231xx-alsa.o
-obj-$(CONFIG_VIDEO_CX231XX_DVB) += cx231xx-dvb.o
+obj-$(CONFIG_VIDEO_CX231XX_DVB) += cx231xx-dvb-ci.o
+cx231xx-dvb-ci-objs += cx231xx-dvb.o tbscxci.o
 
 EXTRA_CFLAGS += -Idrivers/media/video
 EXTRA_CFLAGS += -Idrivers/media/common/tuners

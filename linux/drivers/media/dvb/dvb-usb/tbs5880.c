@@ -18,10 +18,6 @@
 
 #include "dvb_ca_en50221.h"
 
-#ifndef USB_PID_TBS5880
-#define USB_PID_TBS5880 0x5880
-#endif
-
 #define TBS5880_READ_MSG 0
 #define TBS5880_WRITE_MSG 1
 
@@ -519,7 +515,6 @@ static void tbs5880_led_ctrl(struct dvb_frontend *fe, int offon)
 	info("tbs5880_led_ctrl %d",offon);
 }
 
-
 static struct dvb_usb_device_properties tbs5880_properties;
 
 static struct tbs5880fe_config tbs5880fe_config = {
@@ -697,14 +692,13 @@ static int tbs5880_load_firmware(struct usb_device *dev,
 	int ret = 0, i;
 	u8 reset;
 	const struct firmware *fw;
-	const char *filename = "dvb-usb-tbsqbox-id5880.fw";
 	switch (dev->descriptor.idProduct) {
 	case 0x5880:
-		ret = request_firmware(&fw, filename, &dev->dev);
+		ret = request_firmware(&fw, tbs5880_properties.firmware, &dev->dev);
 		if (ret != 0) {
 			err("did not find the firmware file. (%s) "
 			"Please see linux/Documentation/dvb/ for more details "
-			"on firmware-problems.", filename);
+			"on firmware-problems.", tbs5880_properties.firmware);
 			return ret;
 		}
 		break;

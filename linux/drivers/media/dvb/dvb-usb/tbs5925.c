@@ -17,10 +17,6 @@
 #include "stb6100.h"
 #include "stb6100_cfg.h"
 
-#ifndef USB_PID_TBS5925
-#define USB_PID_TBS5925 0x5925
-#endif
-
 #define TBS5925_READ_MSG 0
 #define TBS5925_WRITE_MSG 1
 
@@ -196,6 +192,9 @@ static struct stv090x_config stv0900_config = {
 	.tuner_get_bandwidth    = stb6100_get_bandwidth,
 
 	.set_lock_led = tbs5925_led_ctrl,
+
+	.tun1_iqswap=1,
+	.tun2_iqswap=1,
 };
 
 static struct stb6100_config stb6100_config = {
@@ -215,6 +214,12 @@ static int tbs5925_tuner_attach(struct dvb_usb_adapter *adap)
 		return -EIO;
 
 	info("Attached stb6100!\n");
+
+	/* call the init function once to initialize
+	   tuner's clock output divider and demod's
+	   master clock */
+	if (adap->fe[0]->ops.init)
+		adap->fe[0]->ops.init(adap->fe[0]);
 
 	return 0;
 }
@@ -393,14 +398,13 @@ static int tbs5925_load_firmware(struct usb_device *dev,
 	int ret = 0, i;
 	u8 reset;
 	const struct firmware *fw;
-	const char *filename = "dvb-usb-tbsqbox-id5925.fw";
 	switch (dev->descriptor.idProduct) {
 	case 0x5925:
-		ret = request_firmware(&fw, filename, &dev->dev);
+		ret = request_firmware(&fw, tbs5925_properties.firmware, &dev->dev);
 		if (ret != 0) {
 			err("did not find the firmware file. (%s) "
 			"Please see linux/Documentation/dvb/ for more details "
-			"on firmware-problems.", filename);
+			"on firmware-problems.", tbs5925_properties.firmware);
 			return ret;
 		}
 		break;

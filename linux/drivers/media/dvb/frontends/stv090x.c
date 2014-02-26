@@ -4735,10 +4735,36 @@ static int stv090x_init(struct dvb_frontend *fe)
 	if (stv090x_ldpc_mode(state, state->demod_mode) < 0)
 		goto err;
 
-	reg = STV090x_READ_DEMOD(state, TNRCFG2);
-	STV090x_SETFIELD_Px(reg, TUN_IQSWAP_FIELD, state->inversion);
-	if (STV090x_WRITE_DEMOD(state, TNRCFG2, reg) < 0)
+	/* Set AGC mode */
+	reg = stv090x_read_reg(state, STV090x_AGCRF1CFG);
+	reg = config->agc_rf1_inv ? (reg & 0xFE) : (reg | 0x01);
+	if (stv090x_write_reg(state, STV090x_AGCRF1CFG, reg) < 0)
 		goto err;
+	printk("stv090x_init: AGCRF1CFG = 0x%02X\n",reg);
+
+	if (state->device == STV0900) {
+		reg = stv090x_read_reg(state, STV090x_AGCRF2CFG);
+		reg = config->agc_rf2_inv ? (reg & 0xFE) : (reg | 0x01);
+		if (stv090x_write_reg(state, STV090x_AGCRF2CFG, reg) < 0)
+			goto err;
+		printk("stv090x_init: AGCRF2CFG = 0x%02X\n",reg);
+	}
+
+	/* Set IQ wire mode */
+	reg = stv090x_read_reg(state, STV090x_P1_TNRCFG2);
+	reg = config->tun1_iqswap ? (reg | 0x80) : (reg & 0x7F);
+	if (stv090x_write_reg(state, STV090x_P1_TNRCFG2, reg) < 0)
+		goto err;
+	printk("stv090x_init: P1_TNRCFG2 = 0x%02X\n",reg);
+
+	if (state->device == STV0900) {
+		reg = stv090x_read_reg(state, STV090x_P2_TNRCFG2);
+		reg = config->tun2_iqswap ? (reg | 0x80) : (reg & 0x7F);
+		if (stv090x_write_reg(state, STV090x_P2_TNRCFG2, reg) < 0)
+			goto err;
+		printk("stv090x_init: P2_TNRCFG2 = 0x%02X\n",reg);
+	}
+
 	reg = STV090x_READ_DEMOD(state, DEMOD);
 	STV090x_SETFIELD_Px(reg, ROLLOFF_CONTROL_FIELD, state->rolloff);
 	if (STV090x_WRITE_DEMOD(state, DEMOD, reg) < 0)
@@ -4835,12 +4861,10 @@ static int stv090x_setup(struct dvb_frontend *fe)
 	/* write initval */
 	dprintk(FE_DEBUG, 1, "Setting up initial values");
 	for (i = 0; i < t1_size; i++) {
-		/* Konstantin Dimitrov <kosio.dimitrov@gmail.com>: other tuner start */
-		if (config->agc_rf1 && (stv090x_initval[i].addr == STV090x_AGCRF1CFG))
-			stv090x_initval[i].data = config->agc_rf1;
-		if (config->agc_rf2 && (stv090x_initval[i].addr == STV090x_AGCRF2CFG))
-			stv090x_initval[i].data = config->agc_rf2;
-		/* Konstantin Dimitrov <kosio.dimitrov@gmail.com>: other tuner end*/
+		if (stv090x_initval[i].addr == STV090x_AGCRF1CFG)
+			stv090x_initval[i].data = config->agc_rf1_inv ? (stv090x_initval[i].data & 0xFE) : (stv090x_initval[i].data | 0x01);
+		if (stv090x_initval[i].addr == STV090x_AGCRF2CFG)
+			stv090x_initval[i].data = config->agc_rf2_inv ? (stv090x_initval[i].data & 0xFE) : (stv090x_initval[i].data | 0x01);
 		if (stv090x_write_reg(state, stv090x_initval[i].addr, stv090x_initval[i].data) < 0)
 			goto err;
 	}

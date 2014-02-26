@@ -20,15 +20,6 @@
 #include "stv0288.h"
 #include "stb6000.h"
 
-
-#ifndef USB_PID_TBSQBOX
-#define USB_PID_TBSQBOX 0x2601
-#endif
-
-#ifndef USB_PID_TBSQBOX_1
-#define USB_PID_TBSQBOX_1 0x5910
-#endif
-
 #define TBSQBOX_READ_MSG 0
 #define TBSQBOX_WRITE_MSG 1
 
@@ -181,8 +172,40 @@ static void tbsqbox_led_ctrl(struct dvb_frontend *fe, int offon)
 	info("tbsqbox_led_ctrl %d",offon);
 }
 
+static u8 earda0299_inittab[] = {
+	0x01, 0x15,   /* XTAL = 4MHz, VCO = 352 MHz */
+	0x02, 0x30,   /* MCLK = 88 MHz */
+	0x03, 0x00,   /* ACR output 0 */
+	0x04, 0x7d,   /* F22FR = 0x7d, F22 = f_VCO / 128 / 0x7d = 22 kHz */
+	0x05, 0x05,   /* I2CT = 0, SCLT = 1, SDAT = 1 */
+	0x06, 0x00,   /* DAC output 0 */
+	0x08, 0x40,   /* DiSEqC off, LNB power on OP2/LOCK pin on */
+	0x09, 0x00,   /* FIFO */
+	0x0c, 0x51,   /* OP1/OP0 normal, val = 1 (LNB power on) */
+	0x0d, 0x82,   /* DC offset compensation = on, beta_agc1 = 2 */
+	0x0f, 0x92,   /* AGC1R */
+	0x10, 0x34,   /* AGC2O */
+	0x11, 0x84,   /* TLSR */
+	0x12, 0xb9,   /* CFD */
+	0x15, 0xc9,   /* lock detector threshold */
+	0x28, 0x00,   /* out imp: normal, type: parallel, FEC mode: QPSK */
+	0x33, 0xfc,   /* RS control */
+	0x34, 0x93,   /* count viterbi bit errors per 2E18 bytes */
+	0xff, 0xff
+};
 
-static struct stv0288_config earda_config = {
+
+static struct stv0299_config earda0299_config = {
+	.demod_address = 0x68,
+	.inittab = earda0299_inittab,
+	.mclk = 88000000UL,
+	.invert = 1,
+	.skip_reinit = 0,
+	.min_delay_ms = 100,
+//	.set_lock_led = tbsqbox_led_ctrl,
+};
+
+static struct stv0288_config earda0288_config = {
 	.demod_address = 0x68,
 	.set_lock_led = tbsqbox_led_ctrl,
 };
@@ -258,7 +281,7 @@ static int tbsqboxs1_frontend_attach(struct dvb_usb_adapter *d)
 	u8 buf[20];
 
 	if (tbsqboxs1_properties.adapter->tuner_attach == &tbsqboxs1_earda_tuner_attach) {
-		d->fe[0] = dvb_attach(stv0288_attach, &earda_config,
+		d->fe[0] = dvb_attach(stv0288_attach, &earda0288_config,
 					&d->dev->i2c_adap);
 		if (d->fe[0] != NULL) {
 			d->fe[0]->ops.set_voltage = tbsqboxs1_set_voltage;
@@ -271,6 +294,22 @@ static int tbsqboxs1_frontend_attach(struct dvb_usb_adapter *d)
 
 			return 0;
 		}
+
+		d->fe[0] = dvb_attach(stv0299_attach, &earda0299_config,
+					&d->dev->i2c_adap);
+
+		if (d->fe[0] != NULL) {
+			d->fe[0]->ops.set_voltage = tbsqboxs1_set_voltage;
+			info("Attached stv0299!\n");
+
+			buf[0] = 7;
+			buf[1] = 1;
+			tbsqboxs1_op_rw(d->dev->udev, 0x8a, 0, 0,
+					 buf, 2, TBSQBOX_WRITE_MSG);
+
+			return 0;
+		}
+
 	}
 
 	return -EIO;
@@ -359,8 +398,6 @@ static int tbsqboxs1_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
 static struct usb_device_id tbsqboxs1_table[] = {
 	{USB_DEVICE(0x734c, 0x2601)},
 	{USB_DEVICE(0x734c, 0x5910)},
-	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX)},
-	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX_1)},
 	{ }
 };
 
@@ -374,7 +411,6 @@ static int tbsqboxs1_load_firmware(struct usb_device *dev,
 	u8 reset;
 	const struct firmware *fw;
 	const char *filename = "dvb-usb-tbsqbox-id2601.fw";
-	const char *filename1 = "dvb-usb-tbsqbox-id5910.fw";
 	switch (dev->descriptor.idProduct) {
 	case 0x2601:
 		ret = request_firmware(&fw, filename, &dev->dev);
@@ -386,11 +422,11 @@ static int tbsqboxs1_load_firmware(struct usb_device *dev,
 		}
 		break;
 	case 0x5910:
-		ret = request_firmware(&fw, filename1, &dev->dev);
+		ret = request_firmware(&fw, tbsqboxs1_properties.firmware, &dev->dev);
 		if (ret != 0) {
 			err("did not find the firmware file. (%s) "
 			"Please see linux/Documentation/dvb/ for more details "
-			"on firmware-problems.", filename1);
+			"on firmware-problems.", tbsqboxs1_properties.firmware);
 			return ret;
 		}
 		break;
@@ -472,12 +508,16 @@ static struct dvb_usb_device_properties tbsqboxs1_properties = {
 			},
 		}
 	},
-	.num_device_descs = 1,
+	.num_device_descs = 2,
 	.devices = {
-		{"TBS QBOX DVBS USB2.0",
+		{"TBS QBOX STV0299 DVBS USB2.0",
+			{&tbsqboxs1_table[0], NULL},
+			{NULL},
+		},
+		{"TBS QBOX STV0288 DVBS USB2.0",
 			{&tbsqboxs1_table[1], NULL},
 			{NULL},
-		}
+		},
 	}
 };
 

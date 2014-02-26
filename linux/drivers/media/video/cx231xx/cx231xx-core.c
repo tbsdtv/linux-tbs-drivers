@@ -752,6 +752,8 @@ int cx231xx_set_mode(struct cx231xx *dev, enum cx231xx_mode set_mode)
 		case CX231XX_BOARD_HAUPPAUGE_USB2_FM_PAL:
 		case CX231XX_BOARD_HAUPPAUGE_USB2_FM_NTSC:
 		case CX231XX_BOARD_TBS_5280:
+		case CX231XX_BOARD_TBS_5281:
+		case CX231XX_BOARD_TBS_5990:
 		errCode = cx231xx_set_agc_analog_digital_mux_select(dev, 0);
 			break;
 		default:
@@ -1512,14 +1514,14 @@ int cx231xx_dev_init(struct cx231xx *dev)
 	/* External Master 2 Bus */
 	dev->i2c_bus[1].nr = 1;
 	dev->i2c_bus[1].dev = dev;
-	dev->i2c_bus[1].i2c_period = I2C_SPEED_100K;	/* 100 KHz */
+	dev->i2c_bus[1].i2c_period = I2C_SPEED_400K;	/* 400 KHz */
 	dev->i2c_bus[1].i2c_nostop = 0;
 	dev->i2c_bus[1].i2c_reserve = 0;
 
 	/* Internal Master 3 Bus */
 	dev->i2c_bus[2].nr = 2;
 	dev->i2c_bus[2].dev = dev;
-	dev->i2c_bus[2].i2c_period = I2C_SPEED_100K;	/* 100kHz */
+	dev->i2c_bus[2].i2c_period = I2C_SPEED_400K;	/* 400kHz */
 	dev->i2c_bus[2].i2c_nostop = 0;
 	dev->i2c_bus[2].i2c_reserve = 0;
 
@@ -1613,6 +1615,8 @@ int cx231xx_dev_init(struct cx231xx *dev)
 	case CX231XX_BOARD_HAUPPAUGE_USB2_FM_PAL:
 	case CX231XX_BOARD_HAUPPAUGE_USB2_FM_NTSC:
 	case CX231XX_BOARD_TBS_5280:
+	case CX231XX_BOARD_TBS_5281:
+	case CX231XX_BOARD_TBS_5990:
 	errCode = cx231xx_set_agc_analog_digital_mux_select(dev, 0);
 		break;
 	default:

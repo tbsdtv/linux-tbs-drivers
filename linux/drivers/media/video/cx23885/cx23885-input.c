@@ -97,6 +97,7 @@ void cx23885_input_rx_work_handler(struct cx23885_dev *dev, u32 events)
 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
 	case CX23885_BOARD_TBS_6920:
 	case CX23885_BOARD_TBS_6921:
+	case CX23885_BOARD_TBS_6925C:
 	case CX23885_BOARD_TBS_6980:
 	case CX23885_BOARD_TBS_6981:
 		/*
@@ -150,6 +151,7 @@ static int cx23885_input_ir_start(struct cx23885_dev *dev)
 	case CX23885_BOARD_HAUPPAUGE_HVR1850:
 	case CX23885_BOARD_HAUPPAUGE_HVR1290:
 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
+	case CX23885_BOARD_TBS_6925C:
 	case CX23885_BOARD_BST_PS8512:
 	case CX23885_BOARD_DVBSKY_S950:
 	case CX23885_BOARD_DVBSKY_S952:
@@ -326,6 +328,12 @@ int cx23885_input_init(struct cx23885_dev *dev)
 		allowed_protos = RC_TYPE_ALL;
 		/* A guess at the remote */
 		rc_map = RC_MAP_TBS_NEC;
+		break;
+	case CX23885_BOARD_TBS_6925C:
+		/* Integrated CX2388[58] IR controller */
+		driver_type = RC_DRIVER_IR_RAW;
+		allowed_protos = RC_TYPE_ALL;
+		rc_map = RC_MAP_RC6_MCE;
 		break;
 	default:
 		return -ENODEV;

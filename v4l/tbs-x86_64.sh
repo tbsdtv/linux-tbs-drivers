@@ -15,6 +15,7 @@ cp ./v4l/tbs5921fe_driver.o.x86_64 ./v4l/tbs5921fe_driver.o
 cp ./v4l/tbsctrl.o.x86_64 ./v4l/tbsctrl.o
 
 cp ./v4l/tbs6925ctrl_driver.o.x86_64 ./v4l/tbs6925ctrl_driver.o
+cp ./v4l/tbs6925cctrl_driver.o.x86_64 ./v4l/tbs6925cctrl_driver.o
 
 cp ./v4l/tbs62x0fe_driver.o.x86_64 ./v4l/tbs62x0fe_driver.o
 
@@ -69,7 +70,13 @@ cp ./v4l/tbs5220ctrl.o.x86_64 ./v4l/tbs5220ctrl.o
 cp ./v4l/tbs5220fe_driver.o.x86_64 ./v4l/tbs5220fe_driver.o
 cp ./v4l/tbs62x1fe_driver.o.x86_64 ./v4l/tbs62x1fe_driver.o
 
+cp ./v4l/tbs6985se_driver.o.x86_64 ./v4l/tbs6985se_driver.o
+cp ./v4l/tbs6991se_driver.o.x86_64 ./v4l/tbs6991se_driver.o
+
 cp ./v4l/saa716x_tt_drv.o.x86_64 ./v4l/saa716x_tt_drv.o
 cp ./v4l/tt_s2_4100_drv.o.x86_64 ./v4l/tt_s2_4100_drv.o
+
+cp ./v4l/tbs5281fe_driver.o.x86_64 ./v4l/tbs5281fe_driver.o
+cp ./v4l/tbs5990fe_driver.o.x86_64 ./v4l/tbs5990fe_driver.o
 
 echo "TBS drivers configured for x86_64 platform."

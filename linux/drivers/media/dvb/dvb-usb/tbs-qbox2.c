@@ -21,15 +21,6 @@
 #include "stb6100.h"
 #include "stb6100_cfg.h"
 
-
-#ifndef USB_PID_TBSQBOX
-#define USB_PID_TBSQBOX 0x2601
-#endif
-
-#ifndef USB_PID_TBSQBOX_1
-#define USB_PID_TBSQBOX_1 0x5920
-#endif
-
 #define TBSQBOX_READ_MSG 0
 #define TBSQBOX_WRITE_MSG 1
 
@@ -220,6 +211,12 @@ static int tbsqbox2_earda_tuner_attach(struct dvb_usb_adapter *adap)
 		&adap->dev->i2c_adap))
 		return -EIO;
 
+	/* call the init function once to initialize
+	   tuner's clock output divider and demod's
+	   master clock */
+	if (adap->fe[0]->ops.init)
+		adap->fe[0]->ops.init(adap->fe[0]);
+
 	info("Attached stb6100!\n");
 
 	return 0;
@@ -379,10 +376,7 @@ static int tbsqbox2_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
 }
 
 static struct usb_device_id tbsqbox2_table[] = {
-	{USB_DEVICE(0x734c, 0x2601)},
 	{USB_DEVICE(0x734c, 0x5920)},
-	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX)},
-	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX_1)},
 	{ }
 };
 
@@ -395,24 +389,13 @@ static int tbsqbox2_load_firmware(struct usb_device *dev,
 	int ret = 0, i;
 	u8 reset;
 	const struct firmware *fw;
-	const char *filename = "dvb-usb-tbsqbox-id2601.fw";
-	const char *filename1 = "dvb-usb-tbsqbox-id5920.fw";
 	switch (dev->descriptor.idProduct) {
-	case 0x2601:
-		ret = request_firmware(&fw, filename, &dev->dev);
-		if (ret != 0) {
-			err("did not find the firmware file. (%s) "
-			"Please see linux/Documentation/dvb/ for more details "
-			"on firmware-problems.", filename);
-			return ret;
-		}
-		break;
 	case 0x5920:
-		ret = request_firmware(&fw, filename1, &dev->dev);
+		ret = request_firmware(&fw, tbsqbox2_properties.firmware, &dev->dev);
 		if (ret != 0) {
 			err("did not find the firmware file. (%s) "
 			"Please see linux/Documentation/dvb/ for more details "
-			"on firmware-problems.", filename1);
+			"on firmware-problems.", tbsqbox2_properties.firmware);
 			return ret;
 		}
 		break;

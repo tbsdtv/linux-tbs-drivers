@@ -36,6 +36,9 @@
 #include "tbs5280fe.h"
 #include "tda18212.h"
 #include "cxd2820r.h"
+#include "tbs5281fe.h"
+#include "tbs5990fe.h"
+#include "tbscxci.h"
 
 MODULE_DESCRIPTION("driver for cx231xx based DVB cards");
 MODULE_AUTHOR("Srinivasa Deevi <srinivasa.deevi@conexant.com>");
@@ -60,6 +63,7 @@ if (debug >= level) 						\
 #define CX231XX_DVB_MAX_PACKETSIZE 564
 #define CX231XX_DVB_MAX_PACKETS 64
 
+#if 0
 struct cx231xx_dvb {
 	struct dvb_frontend *frontend;
 
@@ -76,6 +80,7 @@ struct cx231xx_dvb {
 	struct dmx_frontend fe_mem;
 	struct dvb_net net;
 };
+#endif
 
 static struct s5h1432_config dvico_s5h1432_config = {
 	.output_mode   = S5H1432_SERIAL_OUTPUT,
@@ -159,7 +164,7 @@ static struct tda18271_config pv_tda18271_config = {
 	.small_i2c = TDA18271_03_BYTE_CHUNK_INIT,
 };
 
-int tbs5280ctrl1(struct cx231xx *dev, int type)
+int cx231xx_tbsctrl1(struct cx231xx *dev, int type)
 {
 	if (type == 1)
 		return cx231xx_set_gpio_bit(dev, dev->gpio_dir, 
@@ -169,7 +174,7 @@ int tbs5280ctrl1(struct cx231xx *dev, int type)
 					(u8 *)&dev->gpio_val);
 }
 
-u32 tbs5280ctrl2(struct cx231xx *dev, int type)
+u32 cx231xx_tbsctrl2(struct cx231xx *dev, int type)
 {
 	if (type == 1)
 		return dev->gpio_dir;
@@ -177,7 +182,7 @@ u32 tbs5280ctrl2(struct cx231xx *dev, int type)
 		return dev->gpio_val;
 }
 
-void tbs5280ctrl3(struct cx231xx *dev, int type, u32 val)
+void cx231xx_tbsctrl3(struct cx231xx *dev, int type, u32 val)
 {
 	if (type == 1)
 		dev->gpio_dir = val;
@@ -188,17 +193,41 @@ void tbs5280ctrl3(struct cx231xx *dev, int type, u32 val)
 static struct tbs5280fe_config tbs5280fe_config0 = {
 	.tbs5280fe_address = 0x6c,
 
-	.tbs5280_ctrl1 = tbs5280ctrl1,
-	.tbs5280_ctrl2 = tbs5280ctrl2,
-	.tbs5280_ctrl3 = tbs5280ctrl3,
+	.tbs5280_ctrl1 = cx231xx_tbsctrl1,
+	.tbs5280_ctrl2 = cx231xx_tbsctrl2,
+	.tbs5280_ctrl3 = cx231xx_tbsctrl3,
 };
 
 static struct tbs5280fe_config tbs5280fe_config1 = {
 	.tbs5280fe_address = 0x6d,
 
-	.tbs5280_ctrl1 = tbs5280ctrl1,
-	.tbs5280_ctrl2 = tbs5280ctrl2,
-	.tbs5280_ctrl3 = tbs5280ctrl3,
+	.tbs5280_ctrl1 = cx231xx_tbsctrl1,
+	.tbs5280_ctrl2 = cx231xx_tbsctrl2,
+	.tbs5280_ctrl3 = cx231xx_tbsctrl3,
+};
+
+static struct tbs5281fe_config tbs5281fe_config = {
+	.tbs5281fe_address = 0x64,
+
+	.tbs5281_ctrl1 = cx231xx_tbsctrl1,
+	.tbs5281_ctrl2 = cx231xx_tbsctrl2,
+	.tbs5281_ctrl3 = cx231xx_tbsctrl3,
+};
+
+static struct tbs5990fe_config tbs5990fe_config0 = {
+	.tbs5990fe_address = 0x60,
+
+	.tbs5990_ctrl1 = cx231xx_tbsctrl1,
+	.tbs5990_ctrl2 = cx231xx_tbsctrl2,
+	.tbs5990_ctrl3 = cx231xx_tbsctrl3,
+};
+
+static struct tbs5990fe_config tbs5990fe_config1 = {
+	.tbs5990fe_address = 0x68,
+	
+	.tbs5990_ctrl1 = cx231xx_tbsctrl1,
+	.tbs5990_ctrl2 = cx231xx_tbsctrl2,
+	.tbs5990_ctrl3 = cx231xx_tbsctrl3,
 };
 
 static struct cxd2820r_config cxd2820r_config0 = {
@@ -906,6 +935,39 @@ static int dvb_init(struct cx231xx *dev)
 			dvb_attach(tda18212_attach, dev->dvb[i]->frontend,
 				&dev->i2c_bus[dev->board.demod_i2c_master].i2c_adap, i ? &tda18212_config1 : &tda18212_config0);
 		break;
+	case CX231XX_BOARD_TBS_5281:
+
+		dev->dvb[i]->frontend = dvb_attach(tbs5281fe_attach,
+						&tbs5281fe_config,
+						&dev->i2c_bus[dev->board.demod_i2c_master + i].i2c_adap);
+
+		if (dev->dvb[i]->frontend == NULL) {
+			printk(DRIVER_NAME
+				": Failed to attach demod %d\n", i);
+			result = -EINVAL;
+			goto out_free;
+		}
+		
+		/* define general-purpose callback pointer */
+		dvb->frontend->callback = cx231xx_tuner_callback;
+
+		break;
+	case CX231XX_BOARD_TBS_5990:
+
+		dev->dvb[i]->frontend = dvb_attach(tbs5990fe_attach,
+						i ? &tbs5990fe_config1 : &tbs5990fe_config0,
+						&dev->i2c_bus[dev->board.demod_i2c_master + i].i2c_adap, i);
+
+		if (dev->dvb[i]->frontend == NULL) {
+			printk(DRIVER_NAME
+				": Failed to attach demod %d\n", i);
+			result = -EINVAL;
+			goto out_free;
+		}
+		
+		/* define general-purpose callback pointer */
+		dvb->frontend->callback = cx231xx_tuner_callback;
+		break;
 	
 	default:
 		printk(KERN_ERR "%s/2: The frontend of your DVB/ATSC card"
@@ -921,6 +983,13 @@ static int dvb_init(struct cx231xx *dev)
 
 	/* register everything */
 	result = register_dvb(dvb, THIS_MODULE, dev, &dev->udev->dev);
+
+	/* post init frontend */
+	switch (dev->model) {
+	case CX231XX_BOARD_TBS_5990:
+		tbscxci_init(dev->dvb[i], i);
+		break;
+	}
 
 	mutex_unlock(&dev->lock);
 
@@ -951,6 +1020,7 @@ static int dvb_fini(struct cx231xx *dev)
 
 	for (i = 0; i < dev->board.adap_cnt; i++) {
 	if (dev->dvb[i]) {
+		tbscxci_release(dev->dvb[i]);
 		unregister_dvb(dev->dvb[i]);
 		dev->dvb[i] = NULL;
 	}

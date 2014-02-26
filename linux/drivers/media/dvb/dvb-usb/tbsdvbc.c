@@ -14,10 +14,6 @@
 #include "tbsdvbcfe.h"
 #include "tbsdvbcctrl.h"
 
-#ifndef USB_PID_TBSDVBC
-#define USB_PID_TBSDVBC 0xdc02
-#endif
-
 #define TBSDVBC_READ_MSG 0
 #define TBSDVBC_WRITE_MSG 1
 
@@ -289,14 +285,13 @@ static int tbsdvbc_load_firmware(struct usb_device *dev,
 	int ret = 0, i;
 	u8 reset;
 	const struct firmware *fw;
-	const char *filename = "dvb-usb-tbsqbox-dvbc.fw";
 	switch (dev->descriptor.idProduct) {
 	case 0xdc02:
-		ret = request_firmware(&fw, filename, &dev->dev);
+		ret = request_firmware(&fw, tbsdvbc_properties.firmware, &dev->dev);
 		if (ret != 0) {
 			err("did not find the firmware file. (%s) "
 			"Please see linux/Documentation/dvb/ for more details "
-			"on firmware-problems.", filename);
+			"on firmware-problems.", tbsdvbc_properties.firmware);
 			return ret;
 		}
 		break;

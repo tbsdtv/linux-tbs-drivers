@@ -107,9 +107,13 @@ struct stv090x_config {
 	/* Hook for Lock LED */
 	void (*set_lock_led)(struct dvb_frontend *fe, int offon);
 
-	/* Konstantin Dimitrov <kosio.dimitrov@gmail.com>: other tuner */
-	u8 agc_rf1;
-	u8 agc_rf2;
+	/* AGC control mode */
+	u8 agc_rf1_inv:1;
+	u8 agc_rf2_inv:1;
+
+	/* IQ wires mode */
+	u8 tun1_iqswap:1;
+	u8 tun2_iqswap:1;
 };
 
 #if defined(CONFIG_DVB_STV090x) || (defined(CONFIG_DVB_STV090x_MODULE) && defined(MODULE))

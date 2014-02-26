@@ -34,9 +34,15 @@
 #define v4l_printk(level, name, adapter, addr, fmt, arg...) \
 	printk(level "%s %d-%04x: " fmt, name, i2c_adapter_id(adapter), addr , ## arg)
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
 #define v4l_client_printk(level, client, fmt, arg...)			    \
 	v4l_printk(level, (client)->driver->driver.name, (client)->adapter, \
 		   (client)->addr, fmt , ## arg)
+#else
+#define v4l_client_printk(level, client, fmt, arg...)                       \
+	v4l_printk(level, (client)->dev.driver->name, (client)->adapter, \
+		   (client)->addr, fmt , ## arg)
+#endif
 
 #define v4l_err(client, fmt, arg...) \
 	v4l_client_printk(KERN_ERR, client, fmt , ## arg)

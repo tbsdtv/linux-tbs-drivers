@@ -16,10 +16,6 @@
 
 #include "dvb_ca_en50221.h"
 
-#ifndef USB_PID_TBS5680
-#define USB_PID_TBS5680 0x5680
-#endif
-
 #define TBS5680_READ_MSG 0
 #define TBS5680_WRITE_MSG 1
 
@@ -620,14 +616,13 @@ static int tbs5680_load_firmware(struct usb_device *dev,
 	int ret = 0, i;
 	u8 reset;
 	const struct firmware *fw;
-	const char *filename = "dvb-usb-tbsqbox-id5680.fw";
 	switch (dev->descriptor.idProduct) {
 	case 0x5680:
-		ret = request_firmware(&fw, filename, &dev->dev);
+		ret = request_firmware(&fw, tbs5680_properties.firmware, &dev->dev);
 		if (ret != 0) {
 			err("did not find the firmware file. (%s) "
 			"Please see linux/Documentation/dvb/ for more details "
-			"on firmware-problems.", filename);
+			"on firmware-problems.", tbs5680_properties.firmware);
 			return ret;
 		}
 		break;

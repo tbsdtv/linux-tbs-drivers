@@ -49,6 +49,9 @@
 #include "stv0900.h"
 #include "stv0900_reg.h"
 #include "stv6110.h"
+#include "stv090x.h"
+#include "stb6100.h"
+#include "stb6100_cfg.h"
 #include "lnbh24.h"
 #include "cx24116.h"
 #include "m88ds3103.h"
@@ -64,9 +67,6 @@
 #include "altera-ci.h"
 #include "stv0367.h"
 #include "tda10071.h"
-#include "stb6100.h"
-#include "stb6100_cfg.h"
-#include "stv090x.h"
 #include "tbs6980fe.h"
 #include "tbs6981fe.h"
 #include "tbsfe.h"
@@ -467,6 +467,30 @@ static struct stv6110_config netup_stv6110_tunerconfig_b = {
 	.mclk = 16000000,
 	.clk_div = 1,
 	.gain = 8, /* +16 dB  - maximum gain */
+};
+
+static struct stv090x_config stv0900_config = {
+	.device		= STV0900,
+	.demod_mode	= STV090x_SINGLE,
+	.clk_mode	= STV090x_CLK_EXT,
+
+	.xtal		= 27000000,
+	.address	= 0x68,
+
+	.ts1_mode	= STV090x_TSMODE_PARALLEL_PUNCTURED,
+	/* .ts2_mode	= STV090x_TSMODE_PARALLEL_PUNCTURED, */
+
+	.repeater_level		= STV090x_RPTLEVEL_16,
+
+	.tuner_get_frequency	= stb6100_get_frequency,
+	.tuner_set_frequency	= stb6100_set_frequency,
+	.tuner_set_bandwidth	= stb6100_set_bandwidth,
+	.tuner_get_bandwidth	= stb6100_get_bandwidth,
+};
+
+static struct stb6100_config stb6100_config = {
+	.tuner_address	= 0x60,
+	.refclock	= 27000000
 };
 
 static struct cx24116_config tbs_cx24116_config = {
@@ -871,7 +895,7 @@ static int dvb_register(struct cx23885_tsport *port)
 	struct videobuf_dvb_frontend *fe0, *fe1 = NULL;
 	int mfe_shared = 0; /* bus not shared by default */
 	int ret;
-
+	
 	/* Get the first frontend */
 	fe0 = videobuf_dvb_get_frontend(&port->frontends, 1);
 	if (!fe0)
@@ -1160,6 +1184,19 @@ static int dvb_register(struct cx23885_tsport *port)
 
 		if (fe0->dvb.frontend != NULL)
 			fe0->dvb.frontend->ops.set_voltage = tbs_set_voltage;
+		break;
+	case CX23885_BOARD_TBS_6925C:
+		i2c_bus = &dev->i2c_bus[0];
+
+		fe0->dvb.frontend = dvb_attach(stv090x_attach, &stv0900_config, 
+					&i2c_bus->i2c_adap, STV090x_DEMODULATOR_0);
+		if (fe0->dvb.frontend != NULL) {
+			dvb_attach(stb6100_attach, fe0->dvb.frontend,
+						&stb6100_config, &i2c_bus->i2c_adap);
+			if (fe0->dvb.frontend != NULL)
+				fe0->dvb.frontend->ops.set_voltage = tbs_set_voltage;
+		}
+
 		break;
 	case CX23885_BOARD_TBS_6980:
 		i2c_bus = &dev->i2c_bus[1];
@@ -1559,7 +1596,8 @@ static int dvb_register(struct cx23885_tsport *port)
 		break;
 		}
 	case CX23885_BOARD_TBS_6920: 
-	case CX23885_BOARD_TBS_6921: {
+	case CX23885_BOARD_TBS_6921:
+	case CX23885_BOARD_TBS_6925C: {
 		u8 eeprom[256]; /* 24C02 i2c eeprom */
 
 		cx23885_tbs(dev);

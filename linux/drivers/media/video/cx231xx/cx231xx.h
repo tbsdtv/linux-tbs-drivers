@@ -70,6 +70,8 @@
 #define CX231XX_BOARD_HAUPPAUGE_USB2_FM_PAL 14
 #define CX231XX_BOARD_HAUPPAUGE_USB2_FM_NTSC 15
 #define CX231XX_BOARD_TBS_5280 16
+#define CX231XX_BOARD_TBS_5281 17
+#define CX231XX_BOARD_TBS_5990 18
 
 /* Limits minimum and default number of buffers */
 #define CX231XX_MIN_BUF                 4
@@ -610,6 +612,25 @@ struct cx231xx_tsport {
 	/* Allow a single tsport to have multiple frontends */
 	u32                        num_frontends;
 	void                       *port_priv;
+};
+
+struct cx231xx_dvb {
+	struct dvb_frontend *frontend;
+
+	/* feed count management */
+	struct mutex lock;
+	int nfeeds;
+	u8 count;
+
+	/* general boilerplate stuff */
+	struct dvb_adapter adapter;
+	struct dvb_demux demux;
+	struct dmxdev dmxdev;
+	struct dmx_frontend fe_hw;
+	struct dmx_frontend fe_mem;
+	struct dvb_net net;
+
+	void *adap_priv;
 };
 
 /* main device struct */
