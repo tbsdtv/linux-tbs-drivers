@@ -38,6 +38,7 @@
  *	sysfs stuff
  */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
 static ssize_t show_index(struct device *cd,
 			 struct device_attribute *attr, char *buf)
 {
@@ -59,6 +60,7 @@ static struct device_attribute video_device_attrs[] = {
 	__ATTR(index, S_IRUGO, show_index, NULL),
 	__ATTR_NULL
 };
+#endif
 
 /*
  *	Active devices
@@ -183,7 +185,9 @@ static void v4l2_device_release(struct device *cd)
 
 static struct class video_class = {
 	.name = VIDEO_NAME,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
 	.dev_attrs = video_device_attrs,
+#endif
 };
 
 struct video_device *video_devdata(struct file *file)

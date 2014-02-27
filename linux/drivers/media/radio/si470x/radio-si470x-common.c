@@ -176,7 +176,11 @@ static int si470x_set_chan(struct si470x_device *radio, unsigned short chan)
 
 	/* currently I2C driver only uses interrupt way to tune */
 	if (radio->stci_enabled) {
+	#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
 		INIT_COMPLETION(radio->completion);
+	#else
+		reinit_completion(&radio->completion);
+	#endif
 
 		/* wait till tune operation has completed */
 		retval = wait_for_completion_timeout(&radio->completion,
@@ -324,7 +328,11 @@ static int si470x_set_seek(struct si470x_device *radio,
 
 	/* currently I2C driver only uses interrupt way to seek */
 	if (radio->stci_enabled) {
+	#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
 		INIT_COMPLETION(radio->completion);
+	#else
+		reinit_completion(&radio->completion);
+	#endif
 
 		/* wait till seek operation has completed */
 		retval = wait_for_completion_timeout(&radio->completion,

@@ -43,7 +43,11 @@
 
 #define UNSET (-1U)
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
 #define PREFIX (t->i2c->driver->driver.name)
+#else
+#define PREFIX (t->i2c->dev.driver->name)
+#endif
 
 /*
  * Driver modprobe parameters
@@ -448,7 +452,11 @@ static void set_type(struct i2c_client *c, unsigned int type,
 	}
 
 	tuner_dbg("%s %s I2C addr 0x%02x with type %d used for 0x%02x\n",
-		  c->adapter->name, c->driver->driver.name, c->addr << 1, type,
+		#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
+			c->adapter->name, c->driver->driver.name, c->addr << 1, type,
+		#else
+			c->adapter->name, c->dev.driver->name, c->addr << 1, type,
+		#endif
 		  t->mode_mask);
 	return;
 
@@ -552,7 +560,11 @@ static void tuner_lookup(struct i2c_adapter *adap,
 		int mode_mask;
 
 		if (pos->i2c->adapter != adap ||
-		    strcmp(pos->i2c->driver->driver.name, "tuner"))
+		#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 13, 0)
+			strcmp(pos->i2c->driver->driver.name, "tuner"))
+		#else
+			strcmp(pos->i2c->dev.driver->name, "tuner"))
+		#endif
 			continue;
 
 		mode_mask = pos->mode_mask;
