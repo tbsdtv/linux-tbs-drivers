@@ -1,7 +1,6 @@
 /* DVB USB framework compliant Linux driver for the
  *	DVBWorld DVB-S 2101, 2102, DVB-S2 2104, DVB-C 3101,
- *	TeVii S600, S630, S650, S660, S480, S421, S632,
- *	StarBlazer SB340,
+ *	TeVii S600, S630, S650, S660, S480, S421, S632, S662, S482,
  *	Prof 1100, 7500,
  *	Geniatech SU3000, T220 Cards
  * Copyright (C) 2008-2011 Igor M. Liplianin (liplianin@me.by)
@@ -36,6 +35,8 @@
 #include "m88ds3103.h"
 #include "tda18271.h"
 #include "cxd2820r.h"
+#include "ts2022.h"
+#include "ds3103.h"
 
 #ifndef USB_PID_DW2102
 #define USB_PID_DW2102 0x2102
@@ -83,6 +84,22 @@
 
 #ifndef USB_PID_TEVII_S632
 #define USB_PID_TEVII_S632 0xd632
+#endif
+
+#ifndef USB_PID_GOTVIEW_SAT_HD
+#define USB_PID_GOTVIEW_SAT_HD 0x5456
+#endif
+
+#ifndef USB_PID_TEVII_S662
+#define USB_PID_TEVII_S662 0xd662
+#endif
+
+#ifndef USB_PID_TEVII_S482_1
+#define USB_PID_TEVII_S482_1 0xd483
+#endif
+
+#ifndef USB_PID_TEVII_S482_2
+#define USB_PID_TEVII_S482_2 0xd484
 #endif
 
 #define DW210X_READ_MSG 0
@@ -1087,6 +1104,11 @@ static struct ds3000_config su3000_ds3000_config = {
 	.ci_mode = 1,
 };
 
+static struct ds3103_config su3000_ds3103_config = {
+	.demod_address = 0x68,
+	.ci_mode = 0,
+};
+
 static struct cxd2820r_config cxd2820r_config = {
 	.i2c_address = 0x6c, /* (0xd8 >> 1) */
 	.ts_mode = 0x38,
@@ -1376,12 +1398,25 @@ static int su3000_frontend_attach(struct dvb_usb_adapter *d)
 
 	d->fe[0] = dvb_attach(ds3000_attach, &su3000_ds3000_config,
 					&d->dev->i2c_adap);
-	if (d->fe[0] == NULL)
-		return -EIO;
+	if (d->fe[0]) {
+		info("Attached DS3000!\n");
+		return 0;
+	}
 
-	info("Attached DS3000!\n");
+	d->fe[0] = dvb_attach(ds3103_attach,
+				&su3000_ds3103_config,
+				&d->dev->i2c_adap);
+	if (d->fe[0] != NULL) {
+		if (dvb_attach(ts2022_attach, d->fe[0], 0x60,
+				&d->dev->i2c_adap)) {
+			info("Attached DS3103/TS2022!\n");
+			return 0;
+		}
+	}
 
-	return 0;
+	info("Failed to attach DS310x/TS202x!\n");
+	return -EIO;
+
 }
 
 static int t220_frontend_attach(struct dvb_usb_adapter *d)
@@ -1428,7 +1463,7 @@ static int t220_frontend_attach(struct dvb_usb_adapter *d)
 				d->fe[0]);
 			/* FE 1 attach tuner */
 			if (dvb_attach(tda18271_attach, d->fe[1], 0x60,
-				i2c_tuner, &tda18271_config))
+					i2c_tuner, &tda18271_config))
 				info("Attached TDA18271HD/CXD2820R for DVB-C!\n");
 			return 0;
 		}
@@ -1750,12 +1785,106 @@ static struct rc_map_table rc_map_dvbsky_table[] = {
 	{ 0x002d, KEY_ZOOM },
 };
 
+static struct rc_map_table rc_map_terratec_table[] = {
+	{ 0xf841, KEY_MENU },
+	{ 0xf801, KEY_POWER },
+	{ 0xf842, KEY_OPEN },
+	{ 0x0002, KEY_1 },
+	{ 0x0003, KEY_2 },
+	{ 0x0004, KEY_3 },
+	{ 0xf843, KEY_SUBTITLE },
+	{ 0x0005, KEY_4 },
+	{ 0x0006, KEY_5 },
+	{ 0x0007, KEY_6 },
+	{ 0xf844, KEY_TEXT },
+	{ 0x0008, KEY_7 },
+	{ 0x0009, KEY_8 },
+	{ 0x000A, KEY_9 },
+	{ 0xf845, KEY_DELETE },
+	{ 0xf80b, KEY_SWITCHVIDEOMODE },
+	{ 0xf80c, KEY_0 },
+	{ 0xf80d, KEY_AB },
+	{ 0xf846, KEY_TUNER },
+	{ 0xf847, KEY_DVD },
+	{ 0xf849, KEY_PVR },
+	{ 0xf84a, KEY_AUDIO },
+	{ 0xf84b, KEY_TIME },
+	{ 0xf810, KEY_UP },
+	{ 0xf811, KEY_LEFT },
+	{ 0xf812, KEY_OK },
+	{ 0xf813, KEY_RIGHT },
+	{ 0xf814, KEY_DOWN },
+	{ 0xf80f, KEY_EPG },
+	{ 0xf816, KEY_INFO },
+	{ 0xf84d, KEY_BACK },
+	{ 0xf81c, KEY_VOLUMEUP },
+	{ 0xf84c, KEY_PLAY },
+	{ 0xf81b, KEY_CHANNELUP },
+	{ 0xf81e, KEY_VOLUMEDOWN },
+	{ 0xf81d, KEY_MUTE },
+	{ 0xf81f, KEY_CHANNELDOWN },
+	{ 0xf817, KEY_RED },
+	{ 0xf818, KEY_GREEN },
+	{ 0xf819, KEY_YELLOW },
+	{ 0xf81A, KEY_BLUE },
+	{ 0xf858, KEY_RECORD },
+	{ 0xf848, KEY_STOP },
+	{ 0xf840, KEY_PAUSE },
+	{ 0xf85a, KEY_LAST },
+	{ 0xf861, KEY_REWIND },
+	{ 0xf954, KEY_FASTFORWARD },
+	{ 0xf85c, KEY_NEXT },
+};
+
+static struct rc_map_table rc_map_tt_4600_table[] = {
+	{ 0x41, KEY_POWER },
+	{ 0x42, KEY_SHUFFLE },
+	{ 0x43, KEY_1 },
+	{ 0x44, KEY_2 },
+	{ 0x45, KEY_3 },
+	{ 0x46, KEY_4 },
+	{ 0x47, KEY_5 },
+	{ 0x48, KEY_6 },
+	{ 0x49, KEY_7 },
+	{ 0x4a, KEY_8 },
+	{ 0x4b, KEY_9 },
+	{ 0x4c, KEY_0 },
+	{ 0x4d, KEY_UP },
+	{ 0x4e, KEY_LEFT },
+	{ 0x4f, KEY_OK },
+	{ 0x50, KEY_RIGHT },
+	{ 0x51, KEY_DOWN },
+	{ 0x52, KEY_INFO },
+	{ 0x53, KEY_EXIT },
+	{ 0x54, KEY_RED },
+	{ 0x55, KEY_GREEN },
+	{ 0x56, KEY_YELLOW },
+	{ 0x57, KEY_BLUE },
+	{ 0x58, KEY_MUTE },
+	{ 0x59, KEY_TEXT },
+	{ 0x5a, KEY_MODE },
+	{ 0x61, KEY_OPTION },
+	{ 0x62, KEY_EPG },
+	{ 0x63, KEY_CHANNELUP },
+	{ 0x64, KEY_CHANNELDOWN },
+	{ 0x65, KEY_VOLUMEUP },
+	{ 0x66, KEY_VOLUMEDOWN },
+	{ 0x67, KEY_SETUP },
+	{ 0x7a, KEY_RECORD },
+	{ 0x7b, KEY_PLAY },
+	{ 0x7c, KEY_STOP },
+	{ 0x7d, KEY_REWIND },
+	{ 0x7e, KEY_PAUSE },
+	{ 0x7f, KEY_FORWARD },
+};
 
 static struct rc_map_dvb_usb_table_table keys_tables[] = {
 	{ rc_map_dw210x_table, ARRAY_SIZE(rc_map_dw210x_table) },
 	{ rc_map_tevii_table, ARRAY_SIZE(rc_map_tevii_table) },
 	{ rc_map_tbs_table, ARRAY_SIZE(rc_map_tbs_table) },
 	{ rc_map_su3000_table, ARRAY_SIZE(rc_map_su3000_table) },
+	{ rc_map_tt_4600_table, ARRAY_SIZE(rc_map_tt_4600_table) },
+	{ rc_map_terratec_table, ARRAY_SIZE(rc_map_terratec_table) },
 };
 
 static int dw2102_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
@@ -1810,7 +1939,6 @@ enum dw2102_table_entry {
 	TEVII_S630,
 	PROF_1100,
 	TEVII_S660,
-	STARBLAZER_SB340,
 	PROF_7500,
 	GENIATECH_SU3000,
 	TERRATEC_CINERGY_S2,
@@ -1819,7 +1947,17 @@ enum dw2102_table_entry {
 	X3M_SPC1400HD,
 	TEVII_S421,
 	TEVII_S632,
+	TERRATEC_CINERGY_S2_R2,
+	TT_S2_4600,
+	GOTVIEW_SAT_HD,
 	GENIATECH_T220,
+	VP2000,
+	TEVII_S662,
+	TEVII_S482_1,
+	TEVII_S482_2,
+	TERRATEC_S2_BOX,
+	TERRATEC_DUAL_1,
+	TERRATEC_DUAL_2,
 	BST_US6830HD,
 	BST_US6831HD,
 	BST_US6832HD,
@@ -1835,16 +1973,25 @@ static struct usb_device_id dw2102_table[] = {
 	[TEVII_S630] = {USB_DEVICE(0x9022, USB_PID_TEVII_S630)},
 	[PROF_1100] = {USB_DEVICE(0x3011, USB_PID_PROF_1100)},
 	[TEVII_S660] = {USB_DEVICE(0x9022, USB_PID_TEVII_S660)},
-	[STARBLAZER_SB340] = {USB_DEVICE(0x9022, 0xd662)},
 	[PROF_7500] = {USB_DEVICE(0x3034, 0x7500)},
 	[GENIATECH_SU3000] = {USB_DEVICE(0x1f4d, 0x3000)},
 	[TERRATEC_CINERGY_S2] = {USB_DEVICE(USB_VID_TERRATEC, 0x00a8)},
 	[TEVII_S480_1] = {USB_DEVICE(0x9022, USB_PID_TEVII_S480_1)},
 	[TEVII_S480_2] = {USB_DEVICE(0x9022, USB_PID_TEVII_S480_2)},
 	[X3M_SPC1400HD] = {USB_DEVICE(0x1f4d, 0x3100)},
-	[GENIATECH_T220] = {USB_DEVICE(0x1f4d, 0xD220)},
 	[TEVII_S421] = {USB_DEVICE(0x9022, USB_PID_TEVII_S421)},
 	[TEVII_S632] = {USB_DEVICE(0x9022, USB_PID_TEVII_S632)},
+	[TERRATEC_CINERGY_S2_R2] = {USB_DEVICE(USB_VID_TERRATEC, 0x00b0)},
+	[GOTVIEW_SAT_HD] = {USB_DEVICE(0x1FE1, USB_PID_GOTVIEW_SAT_HD)},
+	[GENIATECH_T220] = {USB_DEVICE(0x1f4d, 0xD220)},
+	[VP2000] = {USB_DEVICE(0x9022, 0x2000)},
+	[TT_S2_4600] = {USB_DEVICE(0x0b48, 0x3011)},
+	[TEVII_S662] = {USB_DEVICE(0x9022, USB_PID_TEVII_S662)},
+	[TEVII_S482_1] = {USB_DEVICE(0x9022, USB_PID_TEVII_S482_1)},
+	[TEVII_S482_2] = {USB_DEVICE(0x9022, USB_PID_TEVII_S482_2)},
+	[TERRATEC_S2_BOX] = {USB_DEVICE(USB_VID_TERRATEC, 0x0105)},
+	[TERRATEC_DUAL_1] = {USB_DEVICE(0x153B,0x1181)},
+	[TERRATEC_DUAL_2] = {USB_DEVICE(0x153B,0x1182)},
 	[BST_US6830HD] = {USB_DEVICE(0x0572, 0x6830)},
 	[BST_US6831HD] = {USB_DEVICE(0x0572, 0x6831)},
 	[BST_US6832HD] = {USB_DEVICE(0x0572, 0x6832)},
@@ -2173,16 +2320,10 @@ static struct dvb_usb_device_description d480_1 = {
 	{NULL},
 };
 
+struct dvb_usb_device_properties *s480_2;
 static struct dvb_usb_device_description d480_2 = {
 	"TeVii S480.2 USB",
 	{&dw2102_table[TEVII_S480_2], NULL},
-	{NULL},
-};
-
-struct dvb_usb_device_properties *sb340;
-static struct dvb_usb_device_description d662 = {
-	"StarBlazer SB340 USB",
-	{&dw2102_table[STARBLAZER_SB340], NULL},
 	{NULL},
 };
 
@@ -2256,6 +2397,14 @@ static struct dvb_usb_device_properties su3000_properties = {
 			{ &dw2102_table[X3M_SPC1400HD], NULL },
 			{ NULL },
 		},
+		{ "Terratec Cinergy S2 USB HD Rev.2",
+			{ &dw2102_table[TERRATEC_CINERGY_S2_R2], NULL },
+			{ NULL },
+		},
+		{ "GOTVIEW Satellite HD",
+			{ &dw2102_table[GOTVIEW_SAT_HD], NULL },
+			{ NULL },
+		},
 	}
 };
 
@@ -2303,6 +2452,58 @@ static struct dvb_usb_device_properties t220_properties = {
 			{ NULL },
 		},
 	}
+};
+
+static struct dvb_usb_device_description d2000 = {
+	"VisionPlus VP2000 USB",
+	{&dw2102_table[VP2000], NULL},
+	{NULL},
+};
+
+struct dvb_usb_device_properties *s662;
+static struct dvb_usb_device_description d662 = {
+	"TeVii S662",
+	{&dw2102_table[TEVII_S662], NULL},
+	{NULL},
+};
+
+static struct dvb_usb_device_description d482_1 = {
+	"TeVii S482.1 USB",
+	{&dw2102_table[TEVII_S482_1], NULL},
+	{NULL},
+};
+
+struct dvb_usb_device_properties *s482_2;
+static struct dvb_usb_device_description d482_2 = {
+	"TeVii S482.2 USB",
+	{&dw2102_table[TEVII_S482_2], NULL},
+	{NULL},
+};
+
+struct dvb_usb_device_properties *s662t;
+static struct dvb_usb_device_description d662t = {
+	"Terratec Cinergy S2 USB BOX",
+	{&dw2102_table[TERRATEC_S2_BOX], NULL},
+	{NULL},
+};
+
+static struct dvb_usb_device_description d482t_1 = {
+	"Terratec Cinergy S2 Dual 1 USB",
+	{&dw2102_table[TERRATEC_DUAL_1], NULL},
+	{NULL},
+};
+
+static struct dvb_usb_device_description d482t_2 = {
+	"Terratec Cinergy S2 Dual 2 USB",
+	{&dw2102_table[TERRATEC_DUAL_2], NULL},
+	{NULL},
+};
+
+struct dvb_usb_device_properties *tt4600;
+static struct dvb_usb_device_description d4600 = {
+	"TT Connect S2 4600",
+	{&dw2102_table[TT_S2_4600], NULL},
+	{NULL},
 };
 
 static struct dvb_usb_device_properties US6830_properties = {
@@ -2423,28 +2624,32 @@ static int dw2102_probe(struct usb_interface *intf,
 	memcpy(s660, &s6x0_properties,
 			sizeof(struct dvb_usb_device_properties));
 	s660->firmware = "dvb-usb-s660.fw";
-	s660->num_device_descs = 3;
+	s660->num_device_descs = 2;
 	s660->devices[0] = d660;
 	s660->devices[1] = d480_1;
-	s660->devices[2] = d480_2;
 	s660->adapter->frontend_attach = ds3000_frontend_attach;
 
-	sb340 = kzalloc(sizeof(struct dvb_usb_device_properties), GFP_KERNEL);
-	if (!sb340) {
+	s480_2 = kzalloc(sizeof(struct dvb_usb_device_properties), GFP_KERNEL);
+	if (!s480_2) {
 		kfree(p1100);
+		kfree(s660);
 		return -ENOMEM;
 	}
-	memcpy(sb340, &s6x0_properties,
+	memcpy(s480_2, &s6x0_properties,
 			sizeof(struct dvb_usb_device_properties));
-	sb340->firmware = "dvb-usb-sb340.fw";
-	sb340->num_device_descs = 1;
-	sb340->devices[0] = d662;
-	sb340->adapter->frontend_attach = ds3000_frontend_attach;
+	s480_2->firmware = "dvb-usb-s660.fw";
+	s480_2->num_device_descs = 1;
+	s480_2->devices[0] = d480_2;
+	s480_2->adapter->frontend_attach = ds3000_frontend_attach;
+	s480_2->rc.legacy.rc_map_table = NULL;
+	s480_2->rc.legacy.rc_map_size = 0;
+	s480_2->rc.legacy.rc_query = NULL;
 
 	p7500 = kzalloc(sizeof(struct dvb_usb_device_properties), GFP_KERNEL);
 	if (!p7500) {
 		kfree(p1100);
 		kfree(s660);
+		kfree(s480_2);
 		return -ENOMEM;
 	}
 	memcpy(p7500, &s6x0_properties,
@@ -2459,15 +2664,94 @@ static int dw2102_probe(struct usb_interface *intf,
 	if (!s421) {
 		kfree(p1100);
 		kfree(s660);
+		kfree(s480_2);
 		kfree(p7500);
 		return -ENOMEM;
 	}
 	memcpy(s421, &su3000_properties,
 			sizeof(struct dvb_usb_device_properties));
-	s421->num_device_descs = 2;
+	s421->num_device_descs = 3;
 	s421->devices[0] = d421;
 	s421->devices[1] = d632;
+	s421->devices[2] = d2000;
 	s421->adapter->frontend_attach = m88rs2000_frontend_attach;
+
+	s662 = kzalloc(sizeof(struct dvb_usb_device_properties), GFP_KERNEL);
+	if (!s662) {
+		kfree(s421);
+		kfree(p1100);
+		kfree(s660);
+		kfree(s480_2);
+		kfree(p7500);
+		return -ENOMEM;
+	}
+	memcpy(s662, &su3000_properties,
+			sizeof(struct dvb_usb_device_properties));
+	s662->num_device_descs = 2;
+	s662->devices[0] = d662;
+	s662->devices[1] = d482_1;
+	s662->rc.legacy.rc_map_table = rc_map_tevii_table;
+	s662->rc.legacy.rc_map_size = ARRAY_SIZE(rc_map_tevii_table);
+	s662->rc.legacy.rc_interval = 250;
+
+	s662t = kzalloc(sizeof(struct dvb_usb_device_properties), GFP_KERNEL);
+	if (!s662t) {
+		kfree(s662);
+		kfree(s421);
+		kfree(p1100);
+		kfree(s660);
+		kfree(s480_2);
+		kfree(p7500);
+		return -ENOMEM;
+	}
+	memcpy(s662t, &su3000_properties,
+			sizeof(struct dvb_usb_device_properties));
+	s662t->num_device_descs = 2;
+	s662t->devices[0] = d662t;
+	s662t->devices[1] = d482t_1;
+	s662t->rc.legacy.rc_map_table = rc_map_terratec_table;
+	s662t->rc.legacy.rc_map_size = ARRAY_SIZE(rc_map_terratec_table);
+	s662t->rc.legacy.rc_interval = 250;
+
+	s482_2 = kzalloc(sizeof(struct dvb_usb_device_properties), GFP_KERNEL);
+	if (!s482_2) {
+		kfree(s662t);
+		kfree(s662);
+		kfree(s421);
+		kfree(p1100);
+		kfree(s660);
+		kfree(s480_2);
+		kfree(p7500);
+		return -ENOMEM;
+	}
+	memcpy(s482_2, &su3000_properties,
+			sizeof(struct dvb_usb_device_properties));
+	s482_2->num_device_descs = 2;
+	s482_2->devices[0] = d482_2;
+	s482_2->devices[1] = d482t_2;
+	s482_2->rc.legacy.rc_map_table = NULL;
+	s482_2->rc.legacy.rc_map_size = 0;
+	s482_2->rc.legacy.rc_query = NULL;
+
+	tt4600 = kzalloc(sizeof(struct dvb_usb_device_properties), GFP_KERNEL);
+	if (!tt4600) {
+		kfree(s482_2);
+		kfree(s662t);
+		kfree(s662);
+		kfree(s421);
+		kfree(p1100);
+		kfree(s660);
+		kfree(s480_2);
+		kfree(p7500);
+		return -ENOMEM;
+	}
+	memcpy(tt4600, &su3000_properties,
+			sizeof(struct dvb_usb_device_properties));
+	tt4600->num_device_descs = 1;
+	tt4600->devices[0] = d4600;
+	tt4600->rc.legacy.rc_map_table = rc_map_tt_4600_table;
+	tt4600->rc.legacy.rc_map_size = ARRAY_SIZE(rc_map_tt_4600_table);
+	tt4600->rc.legacy.rc_interval = 250;
 
 	if (0 == dvb_usb_device_init(intf, &dw2102_properties,
 			THIS_MODULE, NULL, adapter_nr) ||
@@ -2481,11 +2765,19 @@ static int dw2102_probe(struct usb_interface *intf,
 			THIS_MODULE, NULL, adapter_nr) ||
 	    0 == dvb_usb_device_init(intf, s660,
 			THIS_MODULE, NULL, adapter_nr) ||
-	    0 == dvb_usb_device_init(intf, sb340,
+	    0 == dvb_usb_device_init(intf, s480_2,
 			THIS_MODULE, NULL, adapter_nr) ||
 	    0 == dvb_usb_device_init(intf, p7500,
 			THIS_MODULE, NULL, adapter_nr) ||
 	    0 == dvb_usb_device_init(intf, s421,
+			THIS_MODULE, NULL, adapter_nr) ||
+	    0 == dvb_usb_device_init(intf, s662,
+			THIS_MODULE, NULL, adapter_nr) ||
+	    0 == dvb_usb_device_init(intf, s662t,
+			THIS_MODULE, NULL, adapter_nr) ||
+	    0 == dvb_usb_device_init(intf, s482_2,
+			THIS_MODULE, NULL, adapter_nr) ||
+	    0 == dvb_usb_device_init(intf, tt4600,
 			THIS_MODULE, NULL, adapter_nr) ||
 	    0 == dvb_usb_device_init(intf, &su3000_properties,
 			THIS_MODULE, NULL, adapter_nr) ||
@@ -2527,8 +2819,10 @@ module_exit(dw2102_module_exit);
 MODULE_AUTHOR("Igor M. Liplianin (c) liplianin@me.by");
 MODULE_DESCRIPTION("Driver for DVBWorld DVB-S 2101, 2102, DVB-S2 2104,"
 				" DVB-C 3101 USB2.0,"
-				" TeVii S600, S630, S650, S660, S480, S421, S632"
-				" StarBlazer SB340 USB2.0,"
+				" TeVii S600, S630, S650, S660, S480, S421, S632, S662, S482,"
+				" Technotrend S2-4600,"
+				" Terratec Cinergy S2 USB BOX,"
+				" Terratec Cinergy S2 PCIe Dual,"
 				" Prof 1100, 7500 USB2.0,"
 				" Geniatech SU3000, T220 devices");
 MODULE_VERSION("0.1");

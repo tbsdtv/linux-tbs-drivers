@@ -102,6 +102,13 @@ config DVB_CX24123
 	help
 	  A DVB-S tuner module. Say Y when you want to support this frontend.
 
+config DVB_CX24120
+	tristate "Conexant CX24120 based"
+	depends on DVB_CORE && I2C
+	default m if DVB_FE_CUSTOMISE
+	help
+	  A DVB-S/DVB-S2 tuner module. Say Y when you want to support this frontend.
+
 config DVB_MT312
 	tristate "Zarlink VP310/MT312/ZL10313 based"
 	depends on DVB_CORE && I2C
@@ -384,6 +391,13 @@ config DVB_TBS5922FE
 	help
 	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
 
+config DVB_TBS5922SE
+	tristate "TurboSight TBS5922SE based"
+	depends on DVB_CORE && I2C
+	default m if DVB_FE_CUSTOMISE
+	help
+	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
+
 config DVB_TBS5880FE
 	tristate "TurboSight TBS5880FE based"
 	depends on DVB_CORE && I2C
@@ -533,6 +547,20 @@ config DVB_SI21XX
 
 config DVB_DS3000
 	tristate "Montage Tehnology DS3000 based"
+	depends on DVB_CORE && I2C
+	default m if DVB_FE_CUSTOMISE
+	help
+	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
+
+config DVB_TS2022
+	tristate "Montage Tehnology TS2022 based tuners"
+	depends on DVB_CORE && I2C
+	default m if DVB_FE_CUSTOMISE
+	help
+	  A DVB-S/S2 silicon tuner. Say Y when you want to support this tuner.
+
+config DVB_DS3103
+	tristate "Montage Tehnology DS3103 based"
 	depends on DVB_CORE && I2C
 	default m if DVB_FE_CUSTOMISE
 	help

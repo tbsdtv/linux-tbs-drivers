@@ -33,6 +33,7 @@ cp ./v4l/tbs8922fe_driver.o.x86 ./v4l/tbs8922fe_driver.o
 
 cp ./v4l/tbs5922ctrl.o.x86 ./v4l/tbs5922ctrl.o
 cp ./v4l/tbs5922fe_driver.o.x86 ./v4l/tbs5922fe_driver.o
+cp ./v4l/tbs5922se_driver.o.x86 ./v4l/tbs5922se_driver.o
 
 cp ./v4l/tbs5880ctrl.o.x86 ./v4l/tbs5880ctrl.o
 cp ./v4l/tbs5880fe_driver.o.x86 ./v4l/tbs5880fe_driver.o

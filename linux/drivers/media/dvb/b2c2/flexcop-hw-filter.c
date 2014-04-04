@@ -11,6 +11,12 @@ static void flexcop_rcv_data_ctrl(struct flexcop_device *fc, int onoff)
 	deb_ts("rcv_data is now: '%s'\n", onoff ? "on" : "off");
 }
 
+void flexcop_external_stream_control(struct dvb_frontend *fe, u8 onoff)
+{
+	struct flexcop_device *fc = fe->dvb->priv;
+	flexcop_rcv_data_ctrl(fc, onoff);
+}
+
 void flexcop_smc_ctrl(struct flexcop_device *fc, int onoff)
 {
 	flexcop_set_ibi_value(ctrl_208, SMC_Enable_sig, onoff);
@@ -199,6 +205,7 @@ int flexcop_pid_feed_control(struct flexcop_device *fc,
 
 	/* if it was the first or last feed request change the stream-status */
 	if (fc->feedcount == onoff) {
+		if (!fc->need_external_stream_control)
 		flexcop_rcv_data_ctrl(fc, onoff);
 		if (fc->stream_control) /* device specific stream control */
 			fc->stream_control(fc, onoff);

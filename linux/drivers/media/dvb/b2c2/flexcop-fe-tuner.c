@@ -12,6 +12,7 @@
 #include "cx24113.h"
 #include "cx24123.h"
 #include "isl6421.h"
+#include "cx24120.h"
 #include "mt352.h"
 #include "bcm3510.h"
 #include "nxt200x.h"
@@ -25,6 +26,15 @@
  * into the kernel we can't call code that's in modules.  */
 #define FE_SUPPORTED(fe) (defined(CONFIG_DVB_##fe) || \
 	(defined(CONFIG_DVB_##fe##_MODULE) && defined(MODULE)))
+
+#if FE_SUPPORTED(BCM3510) || FE_SUPPORTED(CX24120)
+static int flexcop_fe_request_firmware(struct dvb_frontend *fe,
+	const struct firmware **fw, char* name)
+{
+	struct flexcop_device *fc = fe->dvb->priv;
+	return request_firmware(fw, name, fc->dev);
+}
+#endif
 
 /* lnb control */
 #if FE_SUPPORTED(MT312) || FE_SUPPORTED(STV0299)
@@ -445,13 +455,6 @@ static int airstar_dvbt_attach(struct flexcop_device *fc,
 
 /* AirStar ATSC 1st generation */
 #if FE_SUPPORTED(BCM3510)
-static int flexcop_fe_request_firmware(struct dvb_frontend *fe,
-	const struct firmware **fw, char* name)
-{
-	struct flexcop_device *fc = fe->dvb->priv;
-	return request_firmware(fw, name, fc->dev);
-}
-
 static struct bcm3510_config air2pc_atsc_first_gen_config = {
 	.demod_address    = 0x0f,
 	.request_firmware = flexcop_fe_request_firmware,
@@ -619,10 +622,40 @@ fail:
 #define cablestar2_attach NULL
 #endif
 
+/* SkyStar S2 PCI DVB-S/S2 card based on Conexant cx24120/cx24118 */
+#if FE_SUPPORTED(CX24120) && FE_SUPPORTED(ISL6421)
+static const struct cx24120_config skystar2_rev3_3_cx24120_config = {
+	.i2c_addr = 0x55,
+	.request_firmware = flexcop_fe_request_firmware,
+};
+
+static int skystarS2_rev33_attach(struct flexcop_device *fc, struct i2c_adapter *i2c)
+{
+//	struct dvb_frontend_ops *ops;
+	
+	fc->fe = dvb_attach(cx24120_attach,
+		&skystar2_rev3_3_cx24120_config, i2c);
+	if (fc->fe == NULL) return 0;
+	fc->dev_type = FC_SKYS2_REV33;
+	fc->fc_i2c_adap[2].no_base_addr = 1;
+	if ( (dvb_attach(isl6421_attach, fc->fe,
+		&fc->fc_i2c_adap[2].i2c_adap, 0x08, 0, 0) == NULL) ) {
+		err("ISL6421 could NOT be attached!");
+		return 0;
+	}
+	info("ISL6421 successfully attached.");
+//	ops = &fc->fe->ops;
+	return 1;
+}
+#else
+#define skystarS2_rev33_attach NULL
+#endif
+
 static struct {
 	flexcop_device_type_t type;
 	int (*attach)(struct flexcop_device *, struct i2c_adapter *);
 } flexcop_frontends[] = {
+	{ FC_SKYS2_REV33, skystarS2_rev33_attach },
 	{ FC_SKY_REV27, skystar2_rev27_attach },
 	{ FC_SKY_REV28, skystar2_rev28_attach },
 	{ FC_SKY_REV26, skystar2_rev26_attach },

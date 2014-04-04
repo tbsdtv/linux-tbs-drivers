@@ -265,6 +265,15 @@ config DVB_USB_TBSQBOX22
 	help
 	  Say Y here to support the TurboSight QBOX22 DVB-S USB2.0 receivers
 
+
+config DVB_USB_TBS5923
+	tristate "TurboSight TBS5923 DVB-S2 USB2.0 support"
+	depends on DVB_USB
+	select DVB_TBS5922SE if !DVB_FE_CUSTOMISE
+	select DVB_PLL if !DVB_FE_CUSTOMISE
+	help
+	  Say Y here to support the TurboSight TBS5923 DVB-S USB2.0 receivers
+
 config DVB_USB_TBS5880
 	tristate "TurboSight TBS5880 DVB-T/T2/C USB2.0 support"
 	depends on DVB_USB
@@ -393,7 +402,7 @@ config DVB_USB_DW2102
 	select DVB_M88RS2000 if !DVB_FE_CUSTOMISE
 	select DVB_M88DS3103 if !DVB_FE_CUSTOMISE
 	select DVB_CXD2820R if !DVB_FE_CUSTOMISE
-	select DVB_TDA18271 if !DVB_FE_CUSTOMISE
+	select DVB_TDA18271C2DD if !DVB_FE_CUSTOMISE
 	help
 	  Say Y here to support the DvbWorld, TeVii, Prof, Geniatech, DVBSky DVB-S/S2 USB2.0
 	  receivers.

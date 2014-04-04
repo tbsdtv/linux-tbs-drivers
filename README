@@ -2,6 +2,11 @@ README file for TurboSight Linux drivers
 
 NOTE: this document assumes that all prerequisite packages like kerner headers
 and build tools are already installed in your Linux system.
+----------
+For Ubuntu:
+sudo apt-get install git build-essential linux-headers-generic \
+ncurses-dev libproc-processtable-perl fakeroot\
+---------
 
 Most of the steps require root access to and basic knowledge of Linux system.
 
