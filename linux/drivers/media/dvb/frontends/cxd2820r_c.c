@@ -45,6 +45,7 @@ int cxd2820r_set_frontend_c(struct dvb_frontend *fe,
 		{ 0x1008b, 0x07, 0xff },
 		{ 0x1001f, priv->cfg.if_agc_polarity << 7, 0x80 },
 		{ 0x10070, priv->cfg.ts_mode, 0xff },
+		{ 0x10071, !priv->cfg.ts_clock_inv << 4, 0x10 },
 	};
 
 	dbg("%s: RF=%d SR=%d", __func__, c->frequency, c->symbol_rate);

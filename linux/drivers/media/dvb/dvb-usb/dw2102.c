@@ -1112,6 +1112,7 @@ static struct ds3103_config su3000_ds3103_config = {
 static struct cxd2820r_config cxd2820r_config = {
 	.i2c_address = 0x6c, /* (0xd8 >> 1) */
 	.ts_mode = 0x38,
+	.ts_clock_inv = 1,
 	.if_dvbt_6  = 3300,
 	.if_dvbt_7  = 3500,
 	.if_dvbt_8  = 4000,
@@ -1421,7 +1422,7 @@ static int su3000_frontend_attach(struct dvb_usb_adapter *d)
 
 static int t220_frontend_attach(struct dvb_usb_adapter *d)
 {
-	u8 obuf[3] = { 0xe, 0x80, 0 };
+	u8 obuf[3] = { 0xe, 0x87, 0 };
 	u8 ibuf[] = { 0 };
 
 	if (d->fe[0] != NULL)
@@ -1431,8 +1432,17 @@ static int t220_frontend_attach(struct dvb_usb_adapter *d)
 		err("command 0x0e transfer failed.");
 
 	obuf[0] = 0xe;
-	obuf[1] = 0x83;
+	obuf[1] = 0x86;
+	obuf[2] = 1;
+
+	if (dvb_usb_generic_rw(d->dev, obuf, 3, ibuf, 1, 0) < 0)
+		err("command 0x0e transfer failed.");
+
+	obuf[0] = 0xe;
+	obuf[1] = 0x80;
 	obuf[2] = 0;
+
+	msleep(50);
 
 	if (dvb_usb_generic_rw(d->dev, obuf, 3, ibuf, 1, 0) < 0)
 		err("command 0x0e transfer failed.");

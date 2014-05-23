@@ -1,5 +1,5 @@
 /*
-    TurboSight TBS 5880 DVBT/T2/C frontend driver
+    TurboSight TBS 5280 DVBT/T2/C frontend driver
     Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
 
     Copyright (C) 2011 TurboSight.com

@@ -434,10 +434,13 @@ int tbsci_init(struct saa716x_adapter *adap, int tbsci_nr, int tbsci_mode)
 				data = 0;
 				tbsci_i2c_write(state, 0xd0, &data, 1);
 
+				data = 0;
 				tbsci_i2c_write(state, 0xcc, &data, 1);
+
+				data = 0x01;
 				tbsci_i2c_write(state, 0xcd, &data, 1);
 
-				data = 2;
+				data = 0x08;
 				tbsci_i2c_write(state, 0xce, &data, 1);
 			} else {
 				printk("tbsci: Initializing TBS 6680 CI %d slot\n",

@@ -1,5 +1,5 @@
 /*
-    TurboSight TBS 5881 DVBT/T2/C frontend driver
+    TurboSight TBS 5281 DVBT/T2/C frontend driver
     Copyright (C) 2013 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
 
     Copyright (C) 2013 TurboSight.com
