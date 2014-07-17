@@ -60,6 +60,8 @@
 #include "mb86a16.h"
 #include "ds3000.h"
 #include "m88ds3103.h"
+#include "tbs8921fe.h"
+#include "tbs8921ctrl.h"
 #include "tda10071.h"
 #include "tbs8922fe.h"
 #include "tbs8922ctrl.h"
@@ -78,6 +80,10 @@ MODULE_PARM_DESC(debug,"enable debug messages [dvb]");
 static unsigned int dvb_buf_tscnt = 32;
 module_param(dvb_buf_tscnt, int, 0644);
 MODULE_PARM_DESC(dvb_buf_tscnt, "DVB Buffer TS count [dvb]");
+
+static unsigned int tda10071;
+module_param(tda10071, int, 0644);
+MODULE_PARM_DESC(tda10071, "Enable open-source CX24118/TDA10071 drivers: default 0");
 
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 
@@ -735,6 +741,13 @@ static const struct tda10071_config tbs_tda10071_config = {
 	.spec_inv = 0,
 	.xtal = 40444000, /* 40.444 MHz */
 	.pll_multiplier = 20,
+};
+
+static struct tbs8921fe_config tbs8921_fe_config = {
+	.tbs8921fe_address = 0x55,
+
+	.tbs8921_ctrl1 = tbs8921ctrl1,
+	.tbs8921_ctrl2 = tbs8921ctrl2,
 };
 
 static struct tbs8922fe_config tbs8922_fe_config = {
@@ -1577,10 +1590,18 @@ static int dvb_register(struct cx8802_dev *dev)
 	case CX88_BOARD_TBS_8921:
 		dev->ts_gen_cntrl = 0x04;
 
-		fe0->dvb.frontend = dvb_attach(tda10071_attach, &tbs_tda10071_config, &core->i2c_adap);
+		if (tda10071) {
+			fe0->dvb.frontend = dvb_attach(tda10071_attach, &tbs_tda10071_config, &core->i2c_adap);
 
-		if (fe0->dvb.frontend != NULL)
-			fe0->dvb.frontend->ops.set_voltage = tbs_dvbs_set_voltage;
+			if (fe0->dvb.frontend != NULL)
+				fe0->dvb.frontend->ops.set_voltage = tbs_dvbs_set_voltage;
+		} else {
+			fe0->dvb.frontend = dvb_attach(tbs8921fe_attach,
+							&tbs8921_fe_config,
+							&core->i2c_adap, 0);
+			if (fe0->dvb.frontend != NULL)
+				dvb_attach(tbsfe_attach, fe0->dvb.frontend);
+		}
 		break;
 	case CX88_BOARD_TBS_8922:
 		dev->ts_gen_cntrl = 0x04;

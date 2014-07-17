@@ -27,6 +27,7 @@ struct m88ds3103_config {
 	u8 ci_mode;
 	u8 pin_ctrl;
 	u8 ts_mode; /* 0: Parallel, 1: Serial */
+	u8 tuner_readstops;
 
 	/* Set device param to start dma */
 	int (*set_ts_params)(struct dvb_frontend *fe, int is_punctured);

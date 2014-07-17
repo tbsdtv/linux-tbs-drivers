@@ -69,6 +69,7 @@
 #include "tda10071.h"
 #include "tbs6980fe.h"
 #include "tbs6981fe.h"
+#include "tbs6921fe.h"
 #include "tbsfe.h"
 
 static unsigned int debug;
@@ -83,6 +84,10 @@ static unsigned int debug;
 static unsigned int alt_tuner;
 module_param(alt_tuner, int, 0644);
 MODULE_PARM_DESC(alt_tuner, "Enable alternate tuner configuration");
+
+static unsigned int tda10071;
+module_param(tda10071, int, 0644);
+MODULE_PARM_DESC(tda10071, "Enable open-source CX24118/TDA10071 drivers: default 0");
 
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 
@@ -509,6 +514,13 @@ static struct tbs6981fe_config tbs6981_fe_config = {
 
 	.tbs6981_ctrl1 = cx23885ctrl1,
 	.tbs6981_ctrl2 = cx23885ctrl2,
+};
+
+static struct tbs6921fe_config tbs6921_fe_config = {
+	.tbs6921fe_address = 0x55,
+
+	.tbs6921_ctrl1 = cx23885ctrl1,
+	.tbs6921_ctrl2 = cx23885ctrl2,
 };
 
 static const struct tda10071_config tbs_tda10071_config = {
@@ -1180,10 +1192,18 @@ static int dvb_register(struct cx23885_tsport *port)
 	case CX23885_BOARD_TBS_6921:
 		i2c_bus = &dev->i2c_bus[1];
 
-		fe0->dvb.frontend = dvb_attach(tda10071_attach, &tbs_tda10071_config, &i2c_bus->i2c_adap);
+		if (tda10071) {
+			fe0->dvb.frontend = dvb_attach(tda10071_attach, &tbs_tda10071_config, &i2c_bus->i2c_adap);
 
-		if (fe0->dvb.frontend != NULL)
-			fe0->dvb.frontend->ops.set_voltage = tbs_set_voltage;
+			if (fe0->dvb.frontend != NULL)
+				fe0->dvb.frontend->ops.set_voltage = tbs_set_voltage;
+		} else {
+			fe0->dvb.frontend = dvb_attach(tbs6921fe_attach,
+						&tbs6921_fe_config,
+						&i2c_bus->i2c_adap, 0);
+			dvb_attach(tbsfe_attach, fe0->dvb.frontend);
+		}
+
 		break;
 	case CX23885_BOARD_TBS_6925C:
 		i2c_bus = &dev->i2c_bus[0];

@@ -70,6 +70,7 @@ cp ./v4l/tbs5881fe_driver.o.x86_r3 ./v4l/tbs5881fe_driver.o
 cp ./v4l/tbs5220ctrl.o.x86_r3 ./v4l/tbs5220ctrl.o
 cp ./v4l/tbs5220fe_driver.o.x86_r3 ./v4l/tbs5220fe_driver.o
 cp ./v4l/tbs62x1fe_driver.o.x86_r3 ./v4l/tbs62x1fe_driver.o
+cp ./v4l/tbs6290fe_driver.o.x86_r3 ./v4l/tbs6290fe_driver.o
 
 cp ./v4l/tbs6985se_driver.o.x86_r3 ./v4l/tbs6985se_driver.o
 cp ./v4l/tbs6991se_driver.o.x86_r3 ./v4l/tbs6991se_driver.o

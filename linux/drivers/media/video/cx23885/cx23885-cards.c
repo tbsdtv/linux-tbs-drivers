@@ -55,10 +55,6 @@ module_param(enable_tbs_ir, int, 0644);
 MODULE_PARM_DESC(enable_tbs_ir,
 		 "Enable IR support for TBS cards (default:1)\n");
 		 
-static unsigned int enable_tbs_888_ir;
-module_param(enable_tbs_888_ir, int, 0644);
-MODULE_PARM_DESC(enable_tbs_888_ir,
-		 "Enable IR support for TBS cards with CX2388[58] IR (default:0)\n");
 
 /* ------------------------------------------------------------------ */
 /* board config info                                                  */
@@ -1407,7 +1403,7 @@ int cx23885_ir_init(struct cx23885_dev *dev)
 				 ir_rx_pin_cfg_count, ir_rx_pin_cfg);
 		break;
 	case CX23885_BOARD_TBS_6925C:
-		if (!enable_tbs_888_ir)
+		if (!enable_tbs_ir)
 			break;
 		ret = cx23888_ir_probe(dev);
 		if (ret)

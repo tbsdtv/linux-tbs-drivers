@@ -120,7 +120,7 @@ static int m88ds3103_tuner_readreg(struct m88ds3103_state *state, u8 reg)
 			.buf = b1, .len = 1 }
 	};
 
-	m88ds3103_writereg(state, 0x03, 0x11);	
+	m88ds3103_writereg(state, 0x03, (0x11 + state->config->tuner_readstops));
 	ret = i2c_transfer(state->i2c, msg, 2);
 
 	if (ret != 2) {

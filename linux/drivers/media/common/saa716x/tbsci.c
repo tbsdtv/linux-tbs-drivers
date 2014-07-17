@@ -27,9 +27,12 @@ int tbsci_i2c_read(struct tbsci_state *state)
 			.buf = &buf, .len = 1 };
 
 	if (((state->mode == 2) || (state->mode == 4) ||
-			(state->mode == 6) || (state->mode == 8))
+			(state->mode == 6) || (state->mode == 8) || (state->mode == 9))
 		&& (state->nr == 1))
 		msg.addr += 1;
+
+	if (state->mode == 10)
+		msg.addr += 2;
 
 	ret = i2c_transfer(state->i2c_adap, &msg, 1);
 
@@ -51,9 +54,12 @@ int tbsci_i2c_write(struct tbsci_state *state,
 			.buf = &buf[0], .len = len + 1 };
 
 	if (((state->mode == 2) || (state->mode == 4) ||
-			(state->mode == 6) || (state->mode == 8)) 
+			(state->mode == 6) || (state->mode == 8) || (state->mode == 9)) 
 		&& (state->nr == 1))
 		msg.addr += 1;
+
+	if (state->mode == 10)
+		msg.addr += 2;
 
 	memcpy(&buf[1], data, len);
 	buf[0] = addr;
@@ -203,6 +209,7 @@ static int tbsci_set_video_port(struct dvb_ca_en50221 *ca,
 	case 6:
 	case 7:
 	case 8:
+	case 9:
 		data = enable & 1;
 		tbsci_i2c_write(state, 0xc0, &data, 1);
 		break;
@@ -325,6 +332,7 @@ int tbsci_poll_slot_status(struct dvb_ca_en50221 *ca,
 
 		break;
 	case 8:
+	case 9:
 		data = saa716x_gpio_read(saa716x, state->nr ? 6 : 2);
 		if (data != saa716x_gpio_read(saa716x, state->nr ? 3 : 14)) {
 			data  = 0;
@@ -386,7 +394,7 @@ int tbsci_init(struct saa716x_adapter *adap, int tbsci_nr, int tbsci_mode)
 	state->ca.data = state;
 	state->priv = adap;
 
-	if (state->mode != 0) {
+	if ((state->mode != 0) && (state->mode != 10)) {
 		data = 1;
 		tbsci_i2c_write(state, 0xc2, &data, 1);
 		data = tbsci_i2c_read(state);
@@ -422,10 +430,14 @@ int tbsci_init(struct saa716x_adapter *adap, int tbsci_nr, int tbsci_mode)
 			break;
 		case 0x66:
 		case 0x68:
-			if (state->mode == 8) {
+			if (state->mode == 8)
 				printk("tbsci: Initializing TBS 6991SE CI %d slot\n",
 					tbsci_nr);
-			} else {
+			else
+                        if (state->mode == 9) {
+                                printk("tbsci: Initializing TBS 6290 CI %d slot\n",
+                                        tbsci_nr);
+                        } else {
 			if (state->mode != 6) {
 				printk("tbsci: Initializing TBS 6991 v13 CI %d slot\n",
 					tbsci_nr);
@@ -434,13 +446,10 @@ int tbsci_init(struct saa716x_adapter *adap, int tbsci_nr, int tbsci_mode)
 				data = 0;
 				tbsci_i2c_write(state, 0xd0, &data, 1);
 
-				data = 0;
 				tbsci_i2c_write(state, 0xcc, &data, 1);
-
-				data = 0x01;
 				tbsci_i2c_write(state, 0xcd, &data, 1);
 
-				data = 0x08;
+				data = 2;
 				tbsci_i2c_write(state, 0xce, &data, 1);
 			} else {
 				printk("tbsci: Initializing TBS 6680 CI %d slot\n",
@@ -451,6 +460,54 @@ int tbsci_init(struct saa716x_adapter *adap, int tbsci_nr, int tbsci_mode)
 			ret = -EREMOTEIO;
 			goto error2;
 		}
+	}
+
+	if (state->mode == 10) {
+		data = 0xc0;
+		tbsci_i2c_write(state, 0x40, &data, 1);
+		data = tbsci_i2c_read(state);		
+		
+		data = 0x01;
+		tbsci_i2c_write(state, 0xc0, &data, 1);
+
+		data = 0xc0;
+		tbsci_i2c_write(state, 0x40, &data, 1);
+		data = tbsci_i2c_read(state);		
+
+		data = 0xc1;
+		tbsci_i2c_write(state, 0x40, &data, 1);
+		data = tbsci_i2c_read(state);
+
+		data = 0x01;
+		tbsci_i2c_write(state, 0xc1, &data, 1);
+
+		data = 0xc1;
+		tbsci_i2c_write(state, 0x40, &data, 1);
+		data = tbsci_i2c_read(state);
+
+		data = 0xc2;
+		tbsci_i2c_write(state, 0x40, &data, 1);
+		data = tbsci_i2c_read(state);
+
+		data = 0x01;
+		tbsci_i2c_write(state, 0xc2, &data, 1);
+
+		data = 0xc2;
+		tbsci_i2c_write(state, 0x40, &data, 1);
+		data = tbsci_i2c_read(state);
+
+		data = 0xc3;
+		tbsci_i2c_write(state, 0x40, &data, 1);
+		data = tbsci_i2c_read(state);
+
+		data = 0x01;
+		tbsci_i2c_write(state, 0xc3, &data, 1);
+
+		data = 0xc3;
+		tbsci_i2c_write(state, 0x40, &data, 1);
+		data = tbsci_i2c_read(state);
+
+		return 0;
 	}
 
 	ret = dvb_ca_en50221_init(&adap->dvb_adapter, &state->ca,

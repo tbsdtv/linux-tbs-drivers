@@ -21,6 +21,9 @@
 
 #include <linux/version.h>
 #include "tbs-qboxs3.h"
+#include "tbs5921fe.h"
+#include "tbs5921ctrl.h"
+#include "tbsfe.h"
 #include "tda10071.h"
 
 #define TBSQBOX_READ_MSG 0
@@ -43,6 +46,10 @@ struct tbsqboxs3_rc_keys {
 static int dvb_usb_tbsqboxs3_debug;
 module_param_named(debug, dvb_usb_tbsqboxs3_debug, int, 0644);
 MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." DVB_USB_DEBUG_STATUS);
+
+static unsigned int tda10071;
+module_param(tda10071, int, 0644);
+MODULE_PARM_DESC(tda10071, "Enable open-source CX24118/TDA10071 drivers: default 0");
 
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 
@@ -206,6 +213,12 @@ static const struct tda10071_config tbs_tda10071_config = {
 	.set_lock_led = tbsqboxs2_led_ctrl,
 };
 
+static struct tbs5921fe_config tbs5921_fe_config = {
+        .tbs5921fe_address = 0x55,
+
+	.tbs5921_ctrl = tbs5921ctrl,
+};
+
 static int tbsqboxs3_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
 {
 	int i,ret;
@@ -261,10 +274,10 @@ static struct dvb_usb_device_properties tbsqboxs3_properties;
 static int tbsqboxs3_frontend_attach(struct dvb_usb_adapter *d)
 {
 	u8 buf[20];
-	
-        if ((d->fe[0] = dvb_attach(tda10071_attach,
-				&tbs_tda10071_config, &d->dev->i2c_adap)) != NULL) {
 
+	if (tda10071) {
+		if ( (d->fe[0] = dvb_attach(tda10071_attach,
+						&tbs_tda10071_config, &d->dev->i2c_adap)) != NULL) {
 			d->fe[0]->ops.set_voltage = tbsqboxs3_set_voltage;
 			printk("QBOXS3: TDA10071 attached.\n");
 
@@ -279,6 +292,24 @@ static int tbsqboxs3_frontend_attach(struct dvb_usb_adapter *d)
 					buf, 2, TBSQBOX_WRITE_MSG);
 
 			return 0;
+		}
+	} else {
+		if ((d->fe[0] = dvb_attach(tbs5921fe_attach, &tbs5921_fe_config,
+						&d->dev->i2c_adap, 0)) != NULL) {
+		printk("QBOXS3: TBS5921FE attached.\n");
+		dvb_attach(tbsfe_attach, d->fe[0]);
+			buf[0] = 7;
+			buf[1] = 1;
+			tbsqboxs3_op_rw(d->dev->udev, 0x8a, 0, 0,
+					buf, 2, TBSQBOX_WRITE_MSG);
+
+			buf[0] = 1;
+			buf[1] = 1;
+			tbsqboxs3_op_rw(d->dev->udev, 0x8a, 0, 0,
+					buf, 2, TBSQBOX_WRITE_MSG);
+
+			return 0;
+		}
 	}
 
 	return -EIO;

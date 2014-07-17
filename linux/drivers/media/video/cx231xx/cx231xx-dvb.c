@@ -417,9 +417,9 @@ static int start_streaming(struct cx231xx_dvb *dvb)
 		mutex_lock(&dev->i2c_lock);
 		cx231xx_enable_i2c_port_3(dev, false);
 		if (dvb->count == 0)
-			cx231xx_set_alt_setting(dev, INDEX_TS1, 4);
+			cx231xx_set_alt_setting(dev, INDEX_TS1, 5);
 		if (dvb->count == 1)
-			cx231xx_set_alt_setting(dev, INDEX_TS2, 4);
+			cx231xx_set_alt_setting(dev, INDEX_TS2, 5);
 		cx231xx_enable_i2c_port_3(dev, true);
 		mutex_unlock(&dev->i2c_lock);
 		rc = cx231xx_set_mode(dev, CX231XX_DIGITAL_MODE);

@@ -37,6 +37,9 @@
 int stvdebug = 1;
 module_param_named(debug, stvdebug, int, 0644);
 
+u32 stvmclk = 135000000;
+module_param_named(mclk, stvmclk, int, 0644);
+
 /* internal params node */
 struct stv0900_inode {
 	/* pointer for internal params, one for each pair of demods */
@@ -1509,7 +1512,9 @@ static enum fe_stv0900_error stv0900_init_internal(struct dvb_frontend *fe,
 
 	stv0900_write_bits(intp, F0900_P1_TUN_IQSWAP, p_init->tun1_iq_inv);
 	stv0900_write_bits(intp, F0900_P2_TUN_IQSWAP, p_init->tun2_iq_inv);
-	stv0900_set_mclk(intp, 135000000);
+	if (stvmclk < 100000000 || stvmclk > 200000000)
+		stvmclk = 135000000;
+	stv0900_set_mclk(intp, stvmclk);
 	msleep(3);
 
 	switch (intp->clkmode) {
@@ -2017,6 +2022,7 @@ error:
 EXPORT_SYMBOL(stv0900_attach);
 
 MODULE_PARM_DESC(debug, "Set debug");
+MODULE_PARM_DESC(mclk, "Set master clock in Hz (default 135000000)");
 
 MODULE_AUTHOR("Igor M. Liplianin");
 MODULE_DESCRIPTION("ST STV0900 frontend");
