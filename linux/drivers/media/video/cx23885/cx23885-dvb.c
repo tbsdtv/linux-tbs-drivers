@@ -62,6 +62,7 @@
 #include "netup-init.h"
 #include "lgdt3305.h"
 #include "atbm8830.h"
+#include "ts2020.h"
 #include "ds3000.h"
 #include "cx23885-f300.h"
 #include "altera-ci.h"
@@ -530,6 +531,11 @@ static const struct tda10071_config tbs_tda10071_config = {
 	.spec_inv = 0,
 	.xtal = 40444000, /* 40.444 MHz */
 	.pll_multiplier = 20,
+};
+
+static struct ts2020_config tevii_ts2020_config  = {
+	.tuner_address = 0x60,
+	.clk_out_div = 1,
 };
 
 static struct ds3000_config tevii_ds3000_config = {
@@ -1262,8 +1268,11 @@ static int dvb_register(struct cx23885_tsport *port)
 		fe0->dvb.frontend = dvb_attach(ds3000_attach,
 					&tevii_ds3000_config,
 					&i2c_bus->i2c_adap);
-		if (fe0->dvb.frontend != NULL)
+		if (fe0->dvb.frontend != NULL) {
+			dvb_attach(ts2020_attach, fe0->dvb.frontend,
+				&tevii_ts2020_config, &i2c_bus->i2c_adap);
 			fe0->dvb.frontend->ops.set_voltage = f300_set_voltage;
+		}
 
 		break;
 	case CX23885_BOARD_DVBWORLD_2005:
@@ -1428,6 +1437,11 @@ static int dvb_register(struct cx23885_tsport *port)
 		fe0->dvb.frontend = dvb_attach(ds3000_attach,
 					&tevii_ds3000_config,
 					&i2c_bus->i2c_adap);
+		if (fe0->dvb.frontend != NULL) {
+			dvb_attach(ts2020_attach, fe0->dvb.frontend,
+				&tevii_ts2020_config, &i2c_bus->i2c_adap);
+			fe0->dvb.frontend->ops.set_voltage = f300_set_voltage;
+		}
 		break;
 	case CX23885_BOARD_BST_PS8512:
 	case CX23885_BOARD_DVBSKY_S950:

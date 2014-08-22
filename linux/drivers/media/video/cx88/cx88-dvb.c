@@ -58,6 +58,7 @@
 #include "stb6100.h"
 #include "stb6100_cfg.h"
 #include "mb86a16.h"
+#include "ts2020.h"
 #include "ds3000.h"
 #include "m88ds3103.h"
 #include "tbs8921fe.h"
@@ -771,6 +772,11 @@ static int ds3000_set_ts_param(struct dvb_frontend *fe,
 
 	return 0;
 }
+
+static struct ts2020_config tevii_ts2020_config  = {
+	.tuner_address = 0x60,
+	.clk_out_div = 1,
+};
 
 static struct ds3000_config tevii_ds3000_config = {
 	.demod_address = 0x68,
@@ -1545,8 +1551,12 @@ static int dvb_register(struct cx8802_dev *dev)
 						&tevii_ds3000_config,
 						&core->i2c_adap);
 		if (fe0->dvb.frontend != NULL)
+		{
+			dvb_attach(ts2020_attach, fe0->dvb.frontend,
+				&tevii_ts2020_config, &core->i2c_adap);
 			fe0->dvb.frontend->ops.set_voltage =
 							tbs_dvbs_set_voltage;
+		}
 		break;
 	case CX88_BOARD_BST_PS8312:
 		fe0->dvb.frontend = dvb_attach(m88ds3103_attach,

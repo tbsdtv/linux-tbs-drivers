@@ -654,11 +654,15 @@ static inline int snd_card_create(int idx, const char *id,
 			      struct module *module, int extra_size,
 			      struct snd_card **card)
 {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 15, 0)
 	*card = snd_card_new(idx, id, module, extra_size);
 
 	if (*card == NULL)
 		return -ENOMEM;
 	return 0;
+#else
+	return snd_card_new(NULL, idx, id, module, extra_size, card);
+#endif
 }
 #endif
 
@@ -703,9 +707,11 @@ static inline unsigned long hrtimer_forward_now(struct hrtimer *timer,
 #endif /* _LINUX_HRTIMER_H */
 
 #ifndef PCI_VDEVICE
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 16, 0)
 #define PCI_VDEVICE(vendor, device)             \
 	PCI_VENDOR_ID_##vendor, (device),       \
 	PCI_ANY_ID, PCI_ANY_ID, 0, 0
+#endif
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 25)

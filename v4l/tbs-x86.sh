@@ -78,6 +78,8 @@ cp ./v4l/tbs6991se_driver.o.x86 ./v4l/tbs6991se_driver.o
 cp ./v4l/tbs5281fe_driver.o.x86 ./v4l/tbs5281fe_driver.o
 cp ./v4l/tbs5990fe_driver.o.x86 ./v4l/tbs5990fe_driver.o
 
+cp ./v4l/tbs6983fe_driver.o.x86 ./v4l/tbs6983fe_driver.o
+
 cp ./v4l/saa716x_tt_drv.o.x86 ./v4l/saa716x_tt_drv.o
 cp ./v4l/tt_s2_4100_drv.o.x86 ./v4l/tt_s2_4100_drv.o
 

@@ -447,6 +447,13 @@ config DVB_TBS6982SE
 	help
 	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
 
+config DVB_TBS6983FE
+	tristate "TurboSight TBS6983FE based"
+	depends on DVB_CORE && I2C
+	default m if DVB_FE_CUSTOMISE
+	help
+	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
+
 config DVB_TBS6985SE
 	tristate "TurboSight TBS6985SE based"
 	depends on DVB_CORE && I2C

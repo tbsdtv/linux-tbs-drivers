@@ -1351,7 +1351,7 @@ static int ds3103_sleep(struct dvb_frontend *fe)
 static struct dvb_frontend_ops ds3103_ops = {
 	.info = {
 		.type = FE_QPSK,
-		.name = "Montage Technology DS3103/TS2022",
+		.name = "Montage Technology DS3103",
 		.frequency_min = 950000,
 		.frequency_max = 2150000,
 		.frequency_stepsize = 1011, /* kHz for QPSK frontends */

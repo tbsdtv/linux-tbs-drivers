@@ -81,4 +81,6 @@ cp ./v4l/tbs5990fe_driver.o.x86_r3 ./v4l/tbs5990fe_driver.o
 cp ./v4l/saa716x_tt_drv.o.x86_r3 ./v4l/saa716x_tt_drv.o
 cp ./v4l/tt_s2_4100_drv.o.x86_r3 ./v4l/tt_s2_4100_drv.o
 
+cp ./v4l/tbs6983fe_driver.o.x86_r3 ./v4l/tbs6983fe_driver.o
+
 echo "TBS drivers configured for x86_r3 platform."

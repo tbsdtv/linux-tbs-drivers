@@ -86,6 +86,8 @@
 
 #include "tbs6290fe.h"
 
+#include "tbs6983fe.h"
+
 #include "tbsfe.h"
 
 #include "tbsmac.h"
@@ -1316,6 +1318,96 @@ static irqreturn_t saa716x_tbs6982se_pci_irq(int irq, void *dev_id)
 }
 
 static int load_config_tbs6982se(struct saa716x_dev *saa716x)
+{
+	int ret = 0;
+
+	return ret;
+}
+
+static irqreturn_t saa716x_tbs6983_pci_irq(int irq, void *dev_id)
+{
+	struct saa716x_dev *saa716x	= (struct saa716x_dev *) dev_id;
+
+	u32 stat_h, stat_l, mask_h, mask_l;
+	u32 fgpiStatus;
+	u32 activeBuffer;
+
+	if (unlikely(saa716x == NULL)) {
+		printk("%s: saa716x=NULL", __func__);
+		return IRQ_NONE;
+	}
+
+	stat_l = SAA716x_EPRD(MSI, MSI_INT_STATUS_L);
+	stat_h = SAA716x_EPRD(MSI, MSI_INT_STATUS_H);
+	mask_l = SAA716x_EPRD(MSI, MSI_INT_ENA_L);
+	mask_h = SAA716x_EPRD(MSI, MSI_INT_ENA_H);
+
+	dprintk(SAA716x_DEBUG, 1, "MSI STAT L=<%02x> H=<%02x>, CTL L=<%02x> H=<%02x>",
+		stat_l, stat_h, mask_l, mask_h);
+
+	if (!((stat_l & mask_l) || (stat_h & mask_h)))
+		return IRQ_NONE;
+
+	if (stat_l)
+		SAA716x_EPWR(MSI, MSI_INT_STATUS_CLR_L, stat_l);
+
+	if (stat_h)
+		SAA716x_EPWR(MSI, MSI_INT_STATUS_CLR_H, stat_h);
+
+	if (enable_ir) {
+		if (stat_h & MSI_INT_EXTINT_4)
+			saa716x_input_irq_handler(saa716x);
+	}
+
+	if (stat_l) {
+		if (stat_l & MSI_INT_TAGACK_FGPI_1) {
+
+			fgpiStatus = SAA716x_EPRD(FGPI1, INT_STATUS);
+			activeBuffer = (SAA716x_EPRD(BAM, BAM_FGPI1_DMA_BUF_MODE) >> 3) & 0x7;
+			dprintk(SAA716x_DEBUG, 1, "fgpiStatus = %04X, buffer = %d",
+				fgpiStatus, activeBuffer);
+			if (activeBuffer > 0)
+				activeBuffer -= 1;
+			else
+				activeBuffer = 7;
+			if (saa716x->fgpi[1].dma_buf[activeBuffer].mem_virt) {
+				u8 * data = (u8 *)saa716x->fgpi[1].dma_buf[activeBuffer].mem_virt;
+				dprintk(SAA716x_DEBUG, 1, "%02X%02X%02X%02X",
+					data[0], data[1], data[2], data[3]);
+				dvb_dmx_swfilter_packets(&saa716x->saa716x_adap[1].demux, data, 348);
+			}
+			if (fgpiStatus) {
+				SAA716x_EPWR(FGPI1, INT_CLR_STATUS, fgpiStatus);
+			}
+		}
+		if (stat_l & MSI_INT_TAGACK_FGPI_3) {
+
+			fgpiStatus = SAA716x_EPRD(FGPI3, INT_STATUS);
+			activeBuffer = (SAA716x_EPRD(BAM, BAM_FGPI3_DMA_BUF_MODE) >> 3) & 0x7;
+			dprintk(SAA716x_DEBUG, 1, "fgpiStatus = %04X, buffer = %d",
+				fgpiStatus, activeBuffer);
+			if (activeBuffer > 0)
+				activeBuffer -= 1;
+			else
+				activeBuffer = 7;
+			if (saa716x->fgpi[3].dma_buf[activeBuffer].mem_virt) {
+				u8 * data = (u8 *)saa716x->fgpi[3].dma_buf[activeBuffer].mem_virt;
+				dprintk(SAA716x_DEBUG, 1, "%02X%02X%02X%02X",
+					data[0], data[1], data[2], data[3]);
+				dvb_dmx_swfilter_packets(&saa716x->saa716x_adap[0].demux, data, 348);
+			}
+			if (fgpiStatus) {
+				SAA716x_EPWR(FGPI3, INT_CLR_STATUS, fgpiStatus);
+			}
+		}
+	}
+
+	saa716x_msi_event(saa716x, stat_l, stat_h);
+
+	return IRQ_HANDLED;
+}
+
+static int load_config_tbs6983(struct saa716x_dev *saa716x)
 {
 	int ret = 0;
 
@@ -3849,6 +3941,81 @@ static struct saa716x_config saa716x_tbs6982se_config = {
 	.rc_map_name = RC_MAP_TBS_NEC
 };
 
+static struct tbs6983fe_config tbs6983_fe_config = {
+	.tbs6983fe_address = 0x68,
+	
+	.tbs6983_ctrl1 = tbsctrl1,
+	.tbs6983_ctrl2 = tbsctrl2,
+};
+
+#define SAA716x_MODEL_TURBOSIGHT_TBS6983 "TurboSight TBS 6983"
+#define SAA716x_DEV_TURBOSIGHT_TBS6983   "DVB-S2"
+
+static int saa716x_tbs6983_frontend_attach(struct saa716x_adapter *adapter, int count)
+{
+	struct saa716x_dev *saa716x = adapter->saa716x;
+	struct saa716x_i2c *i2c0 = &saa716x->i2c[0];
+	struct saa716x_i2c *i2c1 = &saa716x->i2c[1];
+	u8 mac[6];
+
+	if (count == 0) {
+		saa716x_gpio_set_output(saa716x, 17);
+		msleep(1);
+		saa716x_gpio_write(saa716x, 17, 0);
+		msleep(50);
+		saa716x_gpio_write(saa716x, 17, 1);
+		msleep(100);
+	}
+
+	if (count == 0 || count == 1) {
+		dprintk(SAA716x_ERROR, 1, "Probing for TBS6983 Frontend %d", count);
+		adapter->fe = tbs6983fe_attach (&tbs6983_fe_config, &i2c0->i2c_adapter, count);
+		if (adapter->fe) {
+			dprintk(SAA716x_ERROR, 1, "TBS6983 Frontend found @0x%02x",
+					tbs6983_fe_config.tbs6983fe_address);
+			dvb_attach(tbsfe_attach, adapter->fe);
+			tbs_read_mac(&i2c1->i2c_adapter, 160 + 16*count, mac);
+			memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
+			printk(KERN_INFO "TurboSight TBS6983 DVB-S2 card port%d MAC=%pM\n",
+			count, adapter->dvb_adapter.proposed_mac);
+		} else {
+			goto exit;
+		}
+
+		dprintk(SAA716x_ERROR, 1, "Done!");
+	}
+
+	return 0;
+exit:
+	printk(KERN_ERR "%s: frontend initialization failed\n",
+					adapter->saa716x->config->model_name);
+	dprintk(SAA716x_ERROR, 1, "Frontend attach failed");
+	return -ENODEV;
+}
+
+static struct saa716x_config saa716x_tbs6983_config = {
+	.model_name		= SAA716x_MODEL_TURBOSIGHT_TBS6983,
+	.dev_type		= SAA716x_DEV_TURBOSIGHT_TBS6983,
+	.boot_mode		= SAA716x_EXT_BOOT,
+	.load_config		= &load_config_tbs6983,
+	.adapters		= 2,
+	.frontend_attach	= saa716x_tbs6983_frontend_attach,
+	.irq_handler		= saa716x_tbs6983_pci_irq,
+	.i2c_rate[0]		= SAA716x_I2C_RATE_100,
+	.i2c_rate[1]            = SAA716x_I2C_RATE_100,
+	.adap_config		= {
+		{
+			/* adapter 0 */
+			.ts_port = 3
+		},
+		{
+			/* adapter 1 */
+			.ts_port = 1
+		},
+	}
+};
+
+
 static struct tbs6985se_config tbs6985se_fe_config0 = {
 	.tbs6985se_address = 0x60,
 	
@@ -5095,6 +5262,7 @@ static struct pci_device_id saa716x_tbs_pci_table[] = {
 	MAKE_ENTRY(TURBOSIGHT_TBS6991_SUBVENDOR, TURBOSIGHT_TBS6991_SUBDEVICE+1, SAA7160, &saa716x_tbs6991se_config),
 	MAKE_ENTRY(TURBOSIGHT_TBS6985_SUBVENDOR, TURBOSIGHT_TBS6985SE_SUBDEVICE, SAA7160, &saa716x_tbs6985se_config),
 	MAKE_ENTRY(TURBOSIGHT_TBS6290_SUBVENDOR, TURBOSIGHT_TBS6290_SUBDEVICE, SAA7160, &saa716x_tbs6290_config),
+	MAKE_ENTRY(TURBOSIGHT_TBS6983_SUBVENDOR, TURBOSIGHT_TBS6983_SUBDEVICE, SAA7160, &saa716x_tbs6983_config),
 	MAKE_ENTRY(TECHNOTREND, BUDGET_S2_4100, SAA7160, &saa716x_tt_s2_4100_config),
 	MAKE_ENTRY(TECHNISAT, SKYSTAR2_EXPRESS_HD, SAA7160, &skystar2_express_hd_config),
 	{ }
