@@ -8,7 +8,6 @@
 #ifndef M88RS6000_H
 #define M88RS6000_H
 
-#include <linux/kconfig.h>
 #include <linux/dvb/frontend.h>
 
 struct m88rs6000_config {
