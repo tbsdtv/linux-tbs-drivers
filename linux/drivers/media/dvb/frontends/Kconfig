@@ -756,6 +756,13 @@ config DVB_TDA18272
 	help
 	  A silicon tuner module. Say Y when you want to support this tuner.
 
+config DVB_TDA18273
+	tristate "NXP TDA18273 based"
+	depends on DVB_CORE && I2C
+	default m if DVB_FE_CUSTOMISE
+	help
+	  A silicon tuner module. Say Y when you want to support this tuner.
+
 config DVB_AF9013
 	tristate "Afatech AF9013 demodulator"
 	depends on DVB_CORE && I2C
