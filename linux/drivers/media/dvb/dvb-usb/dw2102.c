@@ -2,8 +2,9 @@
  *	DVBWorld DVB-S 2101, 2102, DVB-S2 2104, DVB-C 3101,
  *	TeVii S600, S630, S650, S660, S480, S421, S632, S662, S482,
  *	Prof 1100, 7500,
- *	Geniatech SU3000, T220 Cards
- * Copyright (C) 2008-2011 Igor M. Liplianin (liplianin@me.by)
+ *	Geniatech SU3000, T220, T220A Cards
+ *	Copyright (C) 2008-2011 Igor M. Liplianin (liplianin@me.by)
+ *	Copyright (C) 2013-2014 CrazyCat (crazycat69@narod.ru)
  *
  *	This program is free software; you can redistribute it and/or modify it
  *	under the terms of the GNU General Public License as published by the
@@ -34,6 +35,7 @@
 #include "ts2020.h"
 #include "m88ds3103.h"
 #include "tda18271.h"
+#include "tda18273.h"
 #include "cxd2820r.h"
 #include "ts2022.h"
 #include "ds3103.h"
@@ -1496,6 +1498,69 @@ static int t220_frontend_attach(struct dvb_usb_adapter *d)
 	return -EIO;
 }
 
+static int t220a_frontend_attach(struct dvb_usb_adapter *d)
+{
+	u8 obuf[3] = { 0xe, 0x87, 0 };
+	u8 ibuf[] = { 0 };
+
+	if (d->fe[0] != NULL)
+		return 0;
+
+	if (dvb_usb_generic_rw(d->dev, obuf, 3, ibuf, 1, 0) < 0)
+		err("command 0x0e transfer failed.");
+
+	obuf[0] = 0xe;
+	obuf[1] = 0x86;
+	obuf[2] = 1;
+
+	if (dvb_usb_generic_rw(d->dev, obuf, 3, ibuf, 1, 0) < 0)
+		err("command 0x0e transfer failed.");
+
+	obuf[0] = 0xe;
+	obuf[1] = 0x80;
+	obuf[2] = 0;
+
+	msleep(50);
+
+	if (dvb_usb_generic_rw(d->dev, obuf, 3, ibuf, 1, 0) < 0)
+		err("command 0x0e transfer failed.");
+
+	obuf[0] = 0xe;
+	obuf[1] = 0x80;
+	obuf[2] = 1;
+
+	if (dvb_usb_generic_rw(d->dev, obuf, 3, ibuf, 1, 0) < 0)
+		err("command 0x0e transfer failed.");
+
+	obuf[0] = 0x51;
+
+	if (dvb_usb_generic_rw(d->dev, obuf, 1, ibuf, 1, 0) < 0)
+		err("command 0x51 transfer failed.");
+
+	d->fe[0] = dvb_attach(cxd2820r_attach, &cxd2820r_config,
+				&d->dev->i2c_adap, NULL);
+
+	if (d->fe[0] != NULL) {
+		struct i2c_adapter *i2c_tuner;
+		i2c_tuner = cxd2820r_get_tuner_i2c_adapter(d->fe[0]);
+		if (dvb_attach(tda18273_attach, d->fe[0],
+					&d->dev->i2c_adap, 0xc0 >> 1)) {
+			info("Attached TDA18273/CXD2820R for DVB-T/T2!\n");
+			/* FE 1. This dvb_attach() cannot fail. */
+			d->fe[1] = dvb_attach(cxd2820r_attach, NULL, NULL,
+				d->fe[0]);
+			/* FE 1 attach tuner */
+			if (dvb_attach(tda18273_attach, d->fe[1],
+					&d->dev->i2c_adap, 0xc0 >> 1))
+				info("Attached TDA18273/CXD2820R for DVB-C!\n");
+			return 0;
+		}
+		d->fe[0] = NULL;
+	}
+
+	return -ENODEV;
+}
+
 static int m88rs2000_frontend_attach(struct dvb_usb_adapter *d)
 {
 	u8 obuf[] = { 0x51 };
@@ -1975,6 +2040,7 @@ enum dw2102_table_entry {
 	TT_S2_4600,
 	GOTVIEW_SAT_HD,
 	GENIATECH_T220,
+	GENIATECH_T220A,
 	VP2000,
 	TEVII_S662,
 	TEVII_S482_1,
@@ -2008,6 +2074,7 @@ static struct usb_device_id dw2102_table[] = {
 	[TERRATEC_CINERGY_S2_R2] = {USB_DEVICE(USB_VID_TERRATEC, 0x00b0)},
 	[GOTVIEW_SAT_HD] = {USB_DEVICE(0x1FE1, USB_PID_GOTVIEW_SAT_HD)},
 	[GENIATECH_T220] = {USB_DEVICE(0x1f4d, 0xD220)},
+	[GENIATECH_T220A] = {USB_DEVICE(0x0572, 0xC686)},
 	[VP2000] = {USB_DEVICE(0x9022, 0x2000)},
 	[TT_S2_4600] = {USB_DEVICE(0x0b48, 0x3011)},
 	[TEVII_S662] = {USB_DEVICE(0x9022, USB_PID_TEVII_S662)},
@@ -2478,6 +2545,52 @@ static struct dvb_usb_device_properties t220_properties = {
 	}
 };
 
+static struct dvb_usb_device_properties t220a_properties = {
+	.caps = DVB_USB_IS_AN_I2C_ADAPTER,
+	.usb_ctrl = DEVICE_SPECIFIC,
+	.size_of_priv = sizeof(struct su3000_state),
+	.power_ctrl = su3000_power_ctrl,
+	.num_adapters = 1,
+	.identify_state	= su3000_identify_state,
+	.i2c_algo = &su3000_i2c_algo,
+
+	.rc.legacy = {
+		.rc_map_table = rc_map_su3000_table,
+		.rc_map_size = ARRAY_SIZE(rc_map_su3000_table),
+		.rc_interval = 150,
+		.rc_query = dw2102_rc_query,
+	},
+
+	.read_mac_address = su3000_read_mac_address,
+
+	.generic_bulk_ctrl_endpoint = 0x01,
+
+	.adapter = {
+		{
+			.num_frontends = 2,
+			.streaming_ctrl   = su3000_streaming_ctrl,
+			.frontend_attach  = t220a_frontend_attach,
+			.stream = {
+				.type = USB_BULK,
+				.count = 8,
+				.endpoint = 0x82,
+				.u = {
+					.bulk = {
+						.buffersize = 4096,
+					}
+				}
+			}
+		}
+	},
+	.num_device_descs = 1,
+	.devices = {
+		{ "Geniatech T220A DVB-T/T2 USB2.0",
+			{ &dw2102_table[GENIATECH_T220A], NULL },
+			{ NULL },
+		},
+	}
+};
+
 static struct dvb_usb_device_description d2000 = {
 	"VisionPlus VP2000 USB",
 	{&dw2102_table[VP2000], NULL},
@@ -2807,6 +2920,8 @@ static int dw2102_probe(struct usb_interface *intf,
 			THIS_MODULE, NULL, adapter_nr) ||
 	    0 == dvb_usb_device_init(intf, &t220_properties,
 			THIS_MODULE, NULL, adapter_nr) ||
+	    0 == dvb_usb_device_init(intf, &t220a_properties,
+			THIS_MODULE, NULL, adapter_nr) ||
 	    0 == dvb_usb_device_init(intf, &US6830_properties,
 			THIS_MODULE, NULL, adapter_nr) ||
 	    0 == dvb_usb_device_init(intf, &US6832_properties,
@@ -2848,6 +2963,6 @@ MODULE_DESCRIPTION("Driver for DVBWorld DVB-S 2101, 2102, DVB-S2 2104,"
 				" Terratec Cinergy S2 USB BOX,"
 				" Terratec Cinergy S2 PCIe Dual,"
 				" Prof 1100, 7500 USB2.0,"
-				" Geniatech SU3000, T220 devices");
+				" Geniatech SU3000, T220, T220A devices");
 MODULE_VERSION("0.1");
 MODULE_LICENSE("GPL");
