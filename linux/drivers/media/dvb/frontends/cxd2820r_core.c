@@ -21,9 +21,21 @@
 
 #include "cxd2820r_priv.h"
 
-int cxd2820r_debug;
-module_param_named(debug, cxd2820r_debug, int, 0644);
+int debug;
+module_param_named(debug, debug, int, 0644);
 MODULE_PARM_DESC(debug, "Turn on/off frontend debugging (default:off).");
+
+/* define how SNR measurement is reported */
+static int esno;
+module_param(esno, int, 0644);
+MODULE_PARM_DESC(esno, "SNR is reported in 0:Percentage, "\
+	"1:(EsNo dB)*10 (default:0)");
+
+/* define how signal measurement is reported */
+static int dbm;
+module_param(dbm, int, 0644);
+MODULE_PARM_DESC(dbm, "Signal is reported in 0:Percentage, "\
+	"1:-1*dBm (default:0)");
 
 /* write multiple registers */
 static int cxd2820r_wr_regs_i2c(struct cxd2820r_priv *priv, u8 i2c, u8 reg,
@@ -485,6 +497,11 @@ static int cxd2820r_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 		ret = cxd2820r_read_signal_strength_c(fe, strength);
 	}
 
+	if (dbm)
+		*strength /= 10;
+	else
+		*strength = (1000 - *strength) * 0xffff / 1000;
+
 	return ret;
 }
 
@@ -518,6 +535,9 @@ static int cxd2820r_read_snr(struct dvb_frontend *fe, u16 *snr)
 
 		ret = cxd2820r_read_snr_c(fe, snr);
 	}
+
+	if (!esno)
+		*snr *= 3 * 0xffff / 1000;
 
 	return ret;
 }

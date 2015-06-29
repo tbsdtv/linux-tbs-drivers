@@ -42,6 +42,8 @@
 #include "dib0070.h"
 #include "lgs8gxx.h"
 #include "atbm8830.h"
+#include "si2168.h"
+#include "si2157.h"
 
 /* debug */
 static int dvb_usb_cxusb_debug;
@@ -722,6 +724,11 @@ static struct max2165_config mygica_d689_max2165_cfg = {
 	.osc_clk = 20
 };
 
+static struct si2157_config mygica_t230_si2157_cfg = {
+	.i2c_addr = 0x60,
+	.if_port = 1
+};
+
 /* Callbacks for DVB USB */
 static int cxusb_fmd1216me_tuner_attach(struct dvb_usb_adapter *adap)
 {
@@ -826,6 +833,14 @@ static int cxusb_mygica_d689_tuner_attach(struct dvb_usb_adapter *adap)
 	struct dvb_frontend *fe;
 	fe = dvb_attach(max2165_attach, adap->fe[0],
 			&adap->dev->i2c_adap, &mygica_d689_max2165_cfg);
+	return (fe == NULL) ? -EIO : 0;
+}
+
+static int cxusb_mygica_t230_tuner_attach(struct dvb_usb_adapter *adap)
+{
+	struct dvb_frontend *fe;
+	fe = dvb_attach(si2157_attach, adap->fe[0],
+			&adap->dev->i2c_adap, &mygica_t230_si2157_cfg);
 	return (fe == NULL) ? -EIO : 0;
 }
 
@@ -1231,6 +1246,50 @@ static int cxusb_mygica_d689_frontend_attach(struct dvb_usb_adapter *adap)
 	return 0;
 }
 
+static struct si2168_config mygica_t230_si2168_cfg = {
+	.i2c_addr = 0x64,
+	.ts_mode = SI2168_TS_PARALLEL,
+	.ts_clock_inv = 1,
+};
+
+static int cxusb_mygica_t230_frontend_attach(struct dvb_usb_adapter *adap)
+{
+	struct dvb_usb_device *d = adap->dev;
+
+	/* Select required USB configuration */
+	if (usb_set_interface(d->udev, 0, 0) < 0)
+		err("set interface failed");
+
+	/* Unblock all USB pipes */
+	usb_clear_halt(d->udev,
+		usb_sndbulkpipe(d->udev, d->props.generic_bulk_ctrl_endpoint));
+	usb_clear_halt(d->udev,
+		usb_rcvbulkpipe(d->udev, d->props.generic_bulk_ctrl_endpoint));
+	usb_clear_halt(d->udev,
+		usb_rcvbulkpipe(d->udev, d->props.adapter[0].stream.endpoint));
+
+
+	/* Reset the tuner */
+	if (cxusb_d680_dmb_gpio_tuner(d, 0x07, 0) < 0) {
+		err("clear tuner gpio failed");
+		return -EIO;
+	}
+	msleep(100);
+	if (cxusb_d680_dmb_gpio_tuner(d, 0x07, 1) < 0) {
+		err("set tuner gpio failed");
+		return -EIO;
+	}
+	msleep(100);
+
+	/* Attach frontend */
+	adap->fe[0] = dvb_attach(si2168_attach, &mygica_t230_si2168_cfg,
+		&d->i2c_adap);
+	if (adap->fe[0] == NULL)
+		return -EIO;
+
+	return 0;
+}
+
 /*
  * DViCO has shipped two devices with the same USB ID, but only one of them
  * needs a firmware download.  Check the device class details to see if they
@@ -1312,6 +1371,7 @@ static struct dvb_usb_device_properties cxusb_bluebird_nano2_needsfirmware_prope
 static struct dvb_usb_device_properties cxusb_aver_a868r_properties;
 static struct dvb_usb_device_properties cxusb_d680_dmb_properties;
 static struct dvb_usb_device_properties cxusb_mygica_d689_properties;
+static struct dvb_usb_device_properties cxusb_mygica_t230_properties;
 
 static int cxusb_probe(struct usb_interface *intf,
 		       const struct usb_device_id *id)
@@ -1342,6 +1402,8 @@ static int cxusb_probe(struct usb_interface *intf,
 				     THIS_MODULE, NULL, adapter_nr) ||
 	    0 == dvb_usb_device_init(intf, &cxusb_mygica_d689_properties,
 				     THIS_MODULE, NULL, adapter_nr) ||
+	    0 == dvb_usb_device_init(intf, &cxusb_mygica_t230_properties,
+				     THIS_MODULE, NULL, adapter_nr) ||
 	    0)
 		return 0;
 
@@ -1369,6 +1431,7 @@ static struct usb_device_id cxusb_table [] = {
 	{ USB_DEVICE(USB_VID_DVICO, USB_PID_DVICO_BLUEBIRD_DUAL_4_REV_2) },
 	{ USB_DEVICE(USB_VID_CONEXANT, USB_PID_CONEXANT_D680_DMB) },
 	{ USB_DEVICE(USB_VID_CONEXANT, USB_PID_MYGICA_D689) },
+	{ USB_DEVICE(USB_VID_CONEXANT, 0xc688) },
 	{}		/* Terminating entry */
 };
 MODULE_DEVICE_TABLE (usb, cxusb_table);
@@ -1977,6 +2040,57 @@ static struct dvb_usb_device_properties cxusb_mygica_d689_properties = {
 			"Mygica D689 DMB-TH",
 			{ NULL },
 			{ &cxusb_table[19], NULL },
+		},
+	}
+};
+
+static struct dvb_usb_device_properties cxusb_mygica_t230_properties = {
+	.caps = DVB_USB_IS_AN_I2C_ADAPTER,
+
+	.usb_ctrl         = CYPRESS_FX2,
+
+	.size_of_priv     = sizeof(struct cxusb_state),
+
+	.num_adapters = 1,
+	.adapter = {
+		{
+			.streaming_ctrl   = cxusb_d680_dmb_streaming_ctrl,
+			.frontend_attach  = cxusb_mygica_t230_frontend_attach,
+			.tuner_attach     = cxusb_mygica_t230_tuner_attach,
+
+			/* parameter for the MPEG2-data transfer */
+			.stream = {
+				.type = USB_BULK,
+				.count = 5,
+				.endpoint = 0x02,
+				.u = {
+					.bulk = {
+						.buffersize = 8192,
+					}
+				}
+			},
+		},
+	},
+
+	.power_ctrl       = cxusb_d680_dmb_power_ctrl,
+
+	.i2c_algo         = &cxusb_i2c_algo,
+
+	.generic_bulk_ctrl_endpoint = 0x01,
+
+	.rc.legacy = {
+		.rc_interval      = 100,
+		.rc_map_table     = rc_map_d680_dmb_table,
+		.rc_map_size      = ARRAY_SIZE(rc_map_d680_dmb_table),
+		.rc_query         = cxusb_d680_dmb_rc_query,
+	},
+
+	.num_device_descs = 1,
+	.devices = {
+		{
+			"Mygica T230 DVB-T/T2/C",
+			{ NULL },
+			{ &cxusb_table[20], NULL },
 		},
 	}
 };

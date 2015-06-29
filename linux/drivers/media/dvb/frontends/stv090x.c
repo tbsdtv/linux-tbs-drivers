@@ -46,6 +46,18 @@ static unsigned int ts_nosync;
 module_param(ts_nosync, int, 0644);
 MODULE_PARM_DESC(ts_nosync, "TS FIFO Minimum latence mode");
 
+/* define how SNR measurement is reported */
+static int esno;
+module_param(esno, int, 0644);
+MODULE_PARM_DESC(esno, "SNR is reported in 0:Percentage, "\
+	"1:(EsNo dB)*10 (default:0)");
+
+/* define how signal measurement is reported */
+static int dbm;
+module_param(dbm, int, 0644);
+MODULE_PARM_DESC(dbm, "Signal is reported in 0:Percentage, "\
+	"1:-1*dBm (default:0)");
+
 /* internal params node */
 struct stv090x_dev {
 	/* pointer for internal params, one for each pair of demods */
@@ -3728,7 +3740,10 @@ static int stv090x_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 		str = 0;
 	else if (agc < stv090x_rf_tab[ARRAY_SIZE(stv090x_rf_tab) - 1].read)
 		str = -100;
-	*strength = (str + 100) * 0xFFFF / 100;
+	if (dbm)
+		*strength = -str;
+	else
+		*strength = (str + 100) * 0xFFFF / 100;
 
 	return 0;
 }
@@ -3760,7 +3775,10 @@ static int stv090x_read_cnr(struct dvb_frontend *fe, u16 *cnr)
 				ARRAY_SIZE(stv090x_s2cn_tab) - 1, val);
 			if (snr < 0) snr = 0;
 			if (snr > 200) snr = 200;
-			*cnr = snr * 0xFFFF / 200;
+			if (esno)
+				*cnr = snr;
+			else
+				*cnr = snr * 0xFFFF / 200;
 		}
 		break;
 
@@ -3783,7 +3801,10 @@ static int stv090x_read_cnr(struct dvb_frontend *fe, u16 *cnr)
 				ARRAY_SIZE(stv090x_s1cn_tab) - 1, val);
 			if (snr < 0) snr = 0;
 			if (snr > 200) snr = 200;
-			*cnr = snr * 0xFFFF / 200;
+			if (esno)
+				*cnr = snr;
+			else
+				*cnr = snr * 0xFFFF / 200;
 		}
 		break;
 	default:

@@ -128,5 +128,7 @@ source "drivers/media/dvb/Kconfig"
 
 source "drivers/media/common/saa716x/Kconfig"
 source "drivers/media/common/saa7231/Kconfig"
+source "drivers/media/common/tbspcie/Kconfig"
+
 
 endif # MEDIA_SUPPORT

@@ -13,4 +13,6 @@ cp ./v4l/tbs5220fe_driver_dvbc.o.x86_64 ./v4l/tbs5220fe_driver.o
 
 cp ./v4l/tbs5281fe_driver_dvbc.o.x86_64 ./v4l/tbs5281fe_driver.o
 
+cp ./v4l/tbs6205fe_driver_dvbc.o.x86_64 ./v4l/tbs6205fe_driver.o
+
 echo "TBS 62xy, 5880 and 528x drivers configured for DVBC (x86_64 platform)."

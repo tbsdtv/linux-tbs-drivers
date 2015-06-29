@@ -360,6 +360,7 @@ int cx231xx_afe_update_power_control(struct cx231xx *dev,
 	case CX231XX_BOARD_TBS_5280:
 	case CX231XX_BOARD_TBS_5281:
 	case CX231XX_BOARD_TBS_5990:
+	case CX231XX_BOARD_TBS_5926:
 		if (avmode == POLARIS_AVMODE_ANALOGT_TV) {
 			while (afe_power_status != (FLD_PWRDN_TUNING_BIAS |
 						FLD_PWRDN_ENABLE_PLL)) {

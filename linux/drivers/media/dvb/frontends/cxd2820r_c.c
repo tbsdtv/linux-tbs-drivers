@@ -187,22 +187,22 @@ int cxd2820r_read_signal_strength_c(struct dvb_frontend *fe,
 	int ret;
 	u8 buf[2];
 	u16 tmp;
+	int rflevel10;
 
 	ret = cxd2820r_rd_regs(priv, 0x10049, buf, sizeof(buf));
 	if (ret)
 		goto error;
 
 	tmp = (buf[0] & 0x03) << 8 | buf[1];
-	tmp = (~tmp & 0x03ff);
+	tmp ^= 0xffff;
 
-	if (tmp == 512)
-		/* ~no signal */
-		tmp = 0;
-	else if (tmp > 350)
-		tmp = 350;
+	rflevel10 =(((((int)(tmp)-64293)*65)>>5)-8000)/10;
+	if (rflevel10>-500)
+		rflevel10+=100;
 
-	/* scale value to 0x0000-0xffff */
-	*strength = tmp * 0xffff / (350-0);
+	dbg("%s: dBmx10=%d val=%04x", __func__, rflevel10, tmp);
+
+	*strength = -rflevel10;
 
 	return ret;
 error:
@@ -240,6 +240,8 @@ int cxd2820r_read_snr_c(struct dvb_frontend *fe, u16 *snr)
 			/ 10;
 	else
 		*snr = 0;
+
+	dbg("%s: dBx10=%d", __func__, *snr);
 
 	return ret;
 error:

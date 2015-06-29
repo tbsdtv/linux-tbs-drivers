@@ -3145,7 +3145,7 @@ static int saa716x_tbs6984_frontend_attach(struct saa716x_adapter *adapter, int 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6984FE %d", count);
 		adapter->fe = dvb_attach(tbs6984fe_attach, &tbs6984_fe_config0,
  							&i2c0->i2c_adapter, count);
-
+	if (adapter->fe) {
 		if (dvb_attach(isl6423_attach,
 				adapter->fe,
 				&i2c0->i2c_adapter,
@@ -3155,6 +3155,9 @@ static int saa716x_tbs6984_frontend_attach(struct saa716x_adapter *adapter, int 
 		memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
 		printk(KERN_INFO "TurboSight TBS6984 DVB-S2 card port%d MAC=%pM\n",
 			count, adapter->dvb_adapter.proposed_mac);
+	} else  {
+		goto exit;
+	}
 		dprintk(SAA716x_ERROR, 1, "Done!");
 	}
 
@@ -3162,6 +3165,7 @@ static int saa716x_tbs6984_frontend_attach(struct saa716x_adapter *adapter, int 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6984FE %d", count);
 		adapter->fe = dvb_attach(tbs6984fe_attach, &tbs6984_fe_config1,
 							&i2c1->i2c_adapter, count);
+	if (adapter->fe) {
 		if (dvb_attach(isl6423_attach,
 				adapter->fe,
 				&i2c1->i2c_adapter,
@@ -3171,12 +3175,11 @@ static int saa716x_tbs6984_frontend_attach(struct saa716x_adapter *adapter, int 
 		memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
 		printk(KERN_INFO "TurboSight TBS6984 DVB-S2 card port%d MAC=%pM\n",
 			count, adapter->dvb_adapter.proposed_mac);
-
+	} else  {
+		goto exit;
+	}
 		dprintk(SAA716x_ERROR, 1, "Done!");
         }
-
-	if (!adapter->fe) 
-		goto exit;
 
 	return 0;
 exit:
@@ -4012,7 +4015,9 @@ static struct saa716x_config saa716x_tbs6983_config = {
 			/* adapter 1 */
 			.ts_port = 1
 		},
-	}
+	},
+	.rc_gpio_in = 4,
+	.rc_map_name = RC_MAP_TBS_NEC
 };
 
 
@@ -5263,6 +5268,7 @@ static struct pci_device_id saa716x_tbs_pci_table[] = {
 	MAKE_ENTRY(TURBOSIGHT_TBS6985_SUBVENDOR, TURBOSIGHT_TBS6985SE_SUBDEVICE, SAA7160, &saa716x_tbs6985se_config),
 	MAKE_ENTRY(TURBOSIGHT_TBS6290_SUBVENDOR, TURBOSIGHT_TBS6290_SUBDEVICE, SAA7160, &saa716x_tbs6290_config),
 	MAKE_ENTRY(TURBOSIGHT_TBS6983_SUBVENDOR, TURBOSIGHT_TBS6983_SUBDEVICE, SAA7160, &saa716x_tbs6983_config),
+	MAKE_ENTRY(TURBOSIGHT_TBS6983_SUBVENDOR, TURBOSIGHT_TBS6983_SUBDEVICE+1, SAA7160, &saa716x_tbs6983_config),
 	MAKE_ENTRY(TECHNOTREND, BUDGET_S2_4100, SAA7160, &saa716x_tt_s2_4100_config),
 	MAKE_ENTRY(TECHNISAT, SKYSTAR2_EXPRESS_HD, SAA7160, &skystar2_express_hd_config),
 	{ }

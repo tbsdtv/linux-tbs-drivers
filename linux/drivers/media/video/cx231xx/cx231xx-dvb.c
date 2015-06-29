@@ -38,6 +38,7 @@
 #include "cxd2820r.h"
 #include "tbs5281fe.h"
 #include "tbs5990fe.h"
+#include "tbs5926fe.h"
 #include "tbscxci.h"
 
 MODULE_DESCRIPTION("driver for cx231xx based DVB cards");
@@ -228,6 +229,14 @@ static struct tbs5990fe_config tbs5990fe_config1 = {
 	.tbs5990_ctrl1 = cx231xx_tbsctrl1,
 	.tbs5990_ctrl2 = cx231xx_tbsctrl2,
 	.tbs5990_ctrl3 = cx231xx_tbsctrl3,
+};
+
+static struct tbs5926fe_config tbs5926fe_config = {
+	.tbs5926fe_address = 0x68,
+
+	.tbs5926_ctrl1 = cx231xx_tbsctrl1,
+	.tbs5926_ctrl2 = cx231xx_tbsctrl2,
+	.tbs5926_ctrl3 = cx231xx_tbsctrl3,
 };
 
 static struct cxd2820r_config cxd2820r_config0 = {
@@ -967,6 +976,23 @@ static int dvb_init(struct cx231xx *dev)
 		
 		/* define general-purpose callback pointer */
 		dvb->frontend->callback = cx231xx_tuner_callback;
+		break;
+	case CX231XX_BOARD_TBS_5926:
+
+			dev->dvb[i]->frontend = dvb_attach(tbs5926fe_attach,
+							&tbs5926fe_config,
+							&dev->i2c_bus[dev->board.demod_i2c_master].i2c_adap, i ? 1:0);
+
+		if (dev->dvb[i]->frontend == NULL) {
+			printk(DRIVER_NAME
+				": Failed to attach demod %d\n", i);
+				result = -EINVAL;
+				goto out_free;
+		}
+
+		/* define general-purpose callback pointer */
+		dvb->frontend->callback = cx231xx_tuner_callback;
+
 		break;
 	
 	default:

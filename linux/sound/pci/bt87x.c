@@ -440,7 +440,11 @@ static int snd_bt87x_pcm_open(struct snd_pcm_substream *substream)
 
 _error:
 	clear_bit(0, &chip->opened);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
 	smp_mb__after_clear_bit();
+#else
+	smp_mb__after_atomic();
+#endif
 	return err;
 }
 
@@ -455,7 +459,11 @@ static int snd_bt87x_close(struct snd_pcm_substream *substream)
 
 	chip->substream = NULL;
 	clear_bit(0, &chip->opened);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
 	smp_mb__after_clear_bit();
+#else
+	smp_mb__after_atomic();
+#endif
 	return 0;
 }
 

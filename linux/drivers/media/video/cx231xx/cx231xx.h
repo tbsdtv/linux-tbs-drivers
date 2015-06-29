@@ -72,6 +72,7 @@
 #define CX231XX_BOARD_TBS_5280 16
 #define CX231XX_BOARD_TBS_5281 17
 #define CX231XX_BOARD_TBS_5990 18
+#define CX231XX_BOARD_TBS_5926 19
 
 /* Limits minimum and default number of buffers */
 #define CX231XX_MIN_BUF                 4

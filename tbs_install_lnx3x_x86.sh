@@ -3,6 +3,7 @@
 echo "TBS drivers set for x86 Linux 3.x"
 
 ./v4l/tbs-x86_r3.sh
+#./v4l/tbs-dvbc-x86_r3.sh
 
 echo "TBS drivers building..."
 make -j2

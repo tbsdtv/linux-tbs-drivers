@@ -31,7 +31,7 @@
 
 #undef dbg
 #define dbg(f, arg...) \
-	if (cxd2820r_debug) \
+	if (debug) \
 		printk(KERN_INFO   LOG_PREFIX": " f "\n" , ## arg)
 #undef err
 #define err(f, arg...)  printk(KERN_ERR     LOG_PREFIX": " f "\n" , ## arg)
@@ -66,7 +66,7 @@ struct cxd2820r_priv {
 
 /* cxd2820r_core.c */
 
-extern int cxd2820r_debug;
+extern int debug;
 
 int cxd2820r_gpio(struct dvb_frontend *fe);
 
