@@ -1391,6 +1391,14 @@ static int su3000_frontend_attach(struct dvb_usb_adapter *d)
 		err("command 0x0e transfer failed.");
 
 	obuf[0] = 0xe;
+	obuf[1] = 0x02;
+	obuf[2] = 1;
+
+	if (dvb_usb_generic_rw(d->dev, obuf, 3, ibuf, 1, 0) < 0)
+		err("command 0x0e transfer failed.");
+	msleep(300);
+
+	obuf[0] = 0xe;
 	obuf[1] = 0x83;
 	obuf[2] = 0;
 

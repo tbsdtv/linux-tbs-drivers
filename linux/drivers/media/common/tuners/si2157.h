@@ -17,7 +17,6 @@
 #ifndef SI2157_H
 #define SI2157_H
 
-#include <linux/kconfig.h>
 #include "dvb_frontend.h"
 
 #define SI2157_CHIPTYPE_SI2157 0

@@ -244,7 +244,7 @@ static int si2168_read_snr(struct dvb_frontend *fe, u16 *snr)
 {
 	struct si2168_state *state = fe->demodulator_priv;
 
-	*snr = state->snr * (0xffff/400) *3;
+	*snr = state->snr * (0xffff/400) *2;
 
 	return 0;
 }
@@ -725,6 +725,10 @@ static const struct dvb_frontend_ops si2168_ops = {
 	.release = si2168_release,
 };
 
+static int dvbc = 0;
+module_param(dvbc, int, 0644);
+MODULE_PARM_DESC(dvbc, "DVB-C mode (default:no).");
+
 struct dvb_frontend *si2168_attach(const struct si2168_config *config,
 				   struct i2c_adapter *i2c)
 {
@@ -750,6 +754,9 @@ struct dvb_frontend *si2168_attach(const struct si2168_config *config,
 	memcpy(&state->frontend.ops, &si2168_ops,
 		sizeof(struct dvb_frontend_ops));
 	state->frontend.demodulator_priv = state;
+
+	if (dvbc)
+		state->frontend.ops.info.type = FE_QAM;
 
 	dprintk_info("Silicon Labs Si2168 successfully attached\n");
 

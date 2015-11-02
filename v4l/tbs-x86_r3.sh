@@ -91,4 +91,6 @@ cp ./v4l/tbs6205fe_driver.o.x86_r3 ./v4l/tbs6205fe_driver.o
 cp ./v4l/tbs6814fe_driver.o.x86_r3 ./v4l/tbs6814fe_driver.o
 cp ./v4l/tbs6704fe_driver.o.x86_r3 ./v4l/tbs6704fe_driver.o
 
+cp ./v4l/tbs6909fe_driver.o.x86_r3 ./v4l/tbs6909fe_driver.o
+
 echo "TBS drivers configured for x86_r3 platform."

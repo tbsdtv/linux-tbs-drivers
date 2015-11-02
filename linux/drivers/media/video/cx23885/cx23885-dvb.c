@@ -57,6 +57,8 @@
 #include "m88ds3103.h"
 #include "m88dc2800.h"
 #include "cimax2.h"
+#include "si2168.h"
+#include "si2157.h"
 #include "lgs8gxx.h"
 #include "netup-eeprom.h"
 #include "netup-init.h"
@@ -650,6 +652,21 @@ static struct m88ds3103_config dvbsky_ds3103_ci_config = {
 static struct m88dc2800_config dvbsky_dc2800_config = {
 	.demod_address = 0x1c,
 	.ts_mode = 3,	
+};
+
+static struct si2157_config dvbsky_si2157_config = {
+	.i2c_addr = 0x60,
+	.if_port = 1
+};
+
+static struct si2168_config dvbsky_si2168_config_pri = {
+	.i2c_addr = 0x64,
+	.ts_mode = SI2168_TS_PARALLEL,
+};
+
+static struct si2168_config dvbsky_si2168_config_sec = {
+	.i2c_addr = 0x64,
+	.ts_mode = SI2168_TS_SERIAL,
 };
 
 static int tbs_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
@@ -1492,7 +1509,63 @@ static int dvb_register(struct cx23885_tsport *port)
 						&dvbsky_ds3103_config_pri,
 						&i2c_bus->i2c_adap);
 			break;
+		/* port C */
+		case 2:
+			i2c_bus = &dev->i2c_bus[0];
+			fe0->dvb.frontend = dvb_attach(si2168_attach,
+						&dvbsky_si2168_config_sec,
+						&i2c_bus->i2c_adap);
+			if (fe0->dvb.frontend != NULL)
+				if (!dvb_attach(si2157_attach,
+					fe0->dvb.frontend,
+					&i2c_bus->i2c_adap,
+					&dvbsky_si2157_config))
+					goto frontend_detach;
+			break;
 		}
+		break;
+	case CX23885_BOARD_DVBSKY_T982:
+		switch (port->nr) {
+		/* port B */
+		case 1:
+			i2c_bus = &dev->i2c_bus[1];
+			fe0->dvb.frontend = dvb_attach(si2168_attach,
+						&dvbsky_si2168_config_pri,
+						&i2c_bus->i2c_adap);
+			if (fe0->dvb.frontend != NULL)
+				if (!dvb_attach(si2157_attach,
+					fe0->dvb.frontend,
+					&i2c_bus->i2c_adap,
+					&dvbsky_si2157_config))
+					goto frontend_detach;
+			break;
+		/* port C */
+		case 2:
+			i2c_bus = &dev->i2c_bus[0];
+			fe0->dvb.frontend = dvb_attach(si2168_attach,
+						&dvbsky_si2168_config_sec,
+						&i2c_bus->i2c_adap);
+			if (fe0->dvb.frontend != NULL)
+				if (!dvb_attach(si2157_attach,
+					fe0->dvb.frontend,
+					&i2c_bus->i2c_adap,
+					&dvbsky_si2157_config))
+					goto frontend_detach;
+			break;
+		}
+		break;
+	case CX23885_BOARD_DVBSKY_T980C:
+	case CX23885_BOARD_TT_CT2_4500_CI:
+		i2c_bus = &dev->i2c_bus[1];	
+		fe0->dvb.frontend = dvb_attach(si2168_attach,
+					&dvbsky_si2168_config_pri,
+					&i2c_bus->i2c_adap);
+		if (fe0->dvb.frontend != NULL)
+			if (!dvb_attach(si2157_attach,
+				fe0->dvb.frontend,
+				&i2c_bus->i2c_adap,
+				&dvbsky_si2157_config))
+				goto frontend_detach;
 		break;
 	case CX23885_BOARD_PROF_8000:
 		i2c_bus = &dev->i2c_bus[0];
@@ -1601,7 +1674,8 @@ static int dvb_register(struct cx23885_tsport *port)
 	case CX23885_BOARD_BST_PS8512:
 	case CX23885_BOARD_DVBSKY_S950:
 	case CX23885_BOARD_DVBSKY_S952:
-	case CX23885_BOARD_DVBSKY_T9580:{
+	case CX23885_BOARD_DVBSKY_T9580:
+	case CX23885_BOARD_DVBSKY_T982: {
 		u8 eeprom[256]; /* 24C02 i2c eeprom */
 
 		if(port->nr > 2)
@@ -1614,7 +1688,9 @@ static int dvb_register(struct cx23885_tsport *port)
 			(port->nr-1)*8, 6);
 		break;
 		}
-	case CX23885_BOARD_DVBSKY_S950_CI: {
+	case CX23885_BOARD_DVBSKY_S950_CI:
+	case CX23885_BOARD_DVBSKY_T980C:
+	case CX23885_BOARD_TT_CT2_4500_CI: {
 		u8 eeprom[256]; /* 24C02 i2c eeprom */
 
 		if(port->nr > 2)
