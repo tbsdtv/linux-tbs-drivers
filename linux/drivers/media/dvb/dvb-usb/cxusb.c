@@ -1268,19 +1268,6 @@ static int cxusb_mygica_t230_frontend_attach(struct dvb_usb_adapter *adap)
 	usb_clear_halt(d->udev,
 		usb_rcvbulkpipe(d->udev, d->props.adapter[0].stream.endpoint));
 
-
-	/* Reset the tuner */
-	if (cxusb_d680_dmb_gpio_tuner(d, 0x07, 0) < 0) {
-		err("clear tuner gpio failed");
-		return -EIO;
-	}
-	msleep(100);
-	if (cxusb_d680_dmb_gpio_tuner(d, 0x07, 1) < 0) {
-		err("set tuner gpio failed");
-		return -EIO;
-	}
-	msleep(100);
-
 	/* Attach frontend */
 	adap->fe[0] = dvb_attach(si2168_attach, &mygica_t230_si2168_cfg,
 		&d->i2c_adap);
@@ -2054,7 +2041,7 @@ static struct dvb_usb_device_properties cxusb_mygica_t230_properties = {
 	.num_adapters = 1,
 	.adapter = {
 		{
-			.streaming_ctrl   = cxusb_d680_dmb_streaming_ctrl,
+			.streaming_ctrl   = cxusb_streaming_ctrl,
 			.frontend_attach  = cxusb_mygica_t230_frontend_attach,
 			.tuner_attach     = cxusb_mygica_t230_tuner_attach,
 
