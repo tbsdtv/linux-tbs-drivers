@@ -1537,14 +1537,12 @@ static int tbs6903fe_frontend_attach(struct tbs_adapter *adapter, int type)
 
 	u8 mac[6];
 
-#if 0
 	if (adapter->count == 0) {
-		tbs_pcie_gpio_write(dev, 3, 0, 1);
+		tbs_pcie_gpio_write(dev, 3, 0, 0);
 		msleep(50);
 		tbs_pcie_gpio_write(dev, 3, 0, 1);
 		msleep(100);
 	}
-#endif
 
 	if (adapter->count == 0 || adapter->count == 1) {
 
@@ -2255,6 +2253,7 @@ static const struct pci_device_id tbs_pci_table[] = {
 	MAKE_ENTRY(0x544d, 0x6178, 0x6205, 0x1131, &pcie_tbs6205_config),
 	MAKE_ENTRY(0x544d, 0x6178, 0x6205, 0x0001, &pcie_tbs6205_config),
 	MAKE_ENTRY(0x544d, 0x6178, 0x6814, 0x1131, &pcie_tbs6814_config),
+	MAKE_ENTRY(0x544d, 0x6178, 0x6814, 0x0001, &pcie_tbs6814_config),
 	MAKE_ENTRY(0x544d, 0x6178, 0x6704, 0x0001, &pcie_tbs6704_config),
 	MAKE_ENTRY(0x544d, 0x6178, 0x6903, 0x0001, &pcie_tbs6903_config),
 	MAKE_ENTRY(0x544d, 0x6178, 0x6910, 0x0001, &pcie_tbs6910_config),
