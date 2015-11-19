@@ -50,6 +50,9 @@
 #include "stb6100.h"
 #include "stb6100_cfg.h"
 
+#include "si2168.h"
+#include "si2157.h"
+
 #include "tbs6984fe.h"
 #include "isl6423.h"
 
@@ -126,6 +129,10 @@ MODULE_PARM_DESC(enable_gts, "Enable TS Generator on TBS 6985: default 1");
 static unsigned int cxd2820r = 1;
 module_param(cxd2820r, int, 0644);
 MODULE_PARM_DESC(cxd2820r, "Enable open-source TDA18212/CXD2820r drivers for TBS 62x0, 6284 cards: default 1");
+
+static unsigned int si2168 = 0;
+module_param(si2168, int, 0644);
+MODULE_PARM_DESC(si2168, "Enable open-source Si2157/2168 drivers for TBS 6221, 6281, 6285, 6290 cards: default 0");
 
 #define DRIVER_NAME "SAA716x TBS"
 
@@ -4928,6 +4935,21 @@ static struct tbs62x1fe_config tbs6285fe_config1 = {
 	.tbs62x1_ctrl2 = tbsctrl2,
 };
 
+static struct si2157_config si2157_cfg = {
+	.i2c_addr = 0x60,
+	.if_port = 1
+};
+
+static struct si2168_config si2168_cfg0 = {
+	.i2c_addr = 0x64,
+	.ts_mode = SI2168_TS_PARALLEL
+};
+
+static struct si2168_config si2168_cfg1 = {
+	.i2c_addr = 0x66,
+	.ts_mode = SI2168_TS_PARALLEL
+};
+
 static int saa716x_tbs6285_frontend_attach(struct saa716x_adapter *adapter, int count)
 {
 	struct saa716x_dev *saa716x = adapter->saa716x;
@@ -4937,11 +4959,22 @@ static int saa716x_tbs6285_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 2) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS62x1FE %d", count);
-		adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6285fe_config0,
-                                			&i2c0->i2c_adapter);
+		if (si2168)
+			adapter->fe = dvb_attach(si2168_attach, &si2168_cfg0,
+					&i2c0->i2c_adapter);
+		else
+			adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6285fe_config0,
+					&i2c0->i2c_adapter);
 
 		if (!adapter->fe)
 			goto exit;
+
+		if (si2168)
+			if (!dvb_attach(si2157_attach, adapter->fe,
+				&i2c0->i2c_adapter, &si2157_cfg)) {
+				dvb_frontend_detach(adapter->fe);
+				goto exit;
+			}
 
 		tbs_read_mac(&i2c0->i2c_adapter, 160 + 16*count, mac);
 		memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
@@ -4953,10 +4986,22 @@ static int saa716x_tbs6285_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 3) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS62x1FE %d", count);
-		adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6285fe_config1,
-                                			&i2c0->i2c_adapter);
+		if (si2168)
+			adapter->fe = dvb_attach(si2168_attach, &si2168_cfg1,
+					&i2c0->i2c_adapter);
+		else
+			adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6285fe_config1,
+					&i2c0->i2c_adapter);
+
 		if (!adapter->fe)
 			goto exit;
+
+		if (si2168)
+			if (!dvb_attach(si2157_attach, adapter->fe,
+				&i2c0->i2c_adapter, &si2157_cfg)) {
+				dvb_frontend_detach(adapter->fe);
+				goto exit;
+			}
 
 		tbs_read_mac(&i2c0->i2c_adapter, 160 + 16*count, mac);
 		memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
@@ -4968,11 +5013,22 @@ static int saa716x_tbs6285_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 0) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS62x1FE %d", count);
-		adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6285fe_config0,
-                                			&i2c1->i2c_adapter);
+		if (si2168)
+			adapter->fe = dvb_attach(si2168_attach, &si2168_cfg0,
+					&i2c1->i2c_adapter);
+		else
+			adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6285fe_config0,
+					&i2c1->i2c_adapter);
 
 		if (!adapter->fe)
 			goto exit;
+
+		if (si2168)
+			if (!dvb_attach(si2157_attach, adapter->fe,
+				&i2c1->i2c_adapter, &si2157_cfg)) {
+				dvb_frontend_detach(adapter->fe);
+				goto exit;
+			}
 
 		tbs_read_mac(&i2c0->i2c_adapter, 160 + 16*count, mac);
 		memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
@@ -4984,10 +5040,22 @@ static int saa716x_tbs6285_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 1) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS62x1FE %d", count);
-		adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6285fe_config1,
-                                			&i2c1->i2c_adapter);
+		if (si2168)
+			adapter->fe = dvb_attach(si2168_attach, &si2168_cfg1,
+					&i2c1->i2c_adapter);
+		else
+			adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6285fe_config1,
+					&i2c1->i2c_adapter);
+
 		if (!adapter->fe)
 			goto exit;
+
+		if (si2168)
+			if (!dvb_attach(si2157_attach, adapter->fe,
+				&i2c1->i2c_adapter, &si2157_cfg)) {
+				dvb_frontend_detach(adapter->fe);
+				goto exit;
+			}
 
 		tbs_read_mac(&i2c0->i2c_adapter, 160 + 16*count, mac);
 		memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
@@ -5054,10 +5122,22 @@ static int saa716x_tbs6221_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 0 ) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6221FE %d", count);
-		adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6221fe_config,
-                                			&i2c->i2c_adapter);
+		if (si2168)
+			adapter->fe = dvb_attach(si2168_attach, &si2168_cfg0,
+							&i2c->i2c_adapter);
+		else
+			adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6221fe_config,
+							&i2c->i2c_adapter);
+
 		if (!adapter->fe)
 			goto exit;
+
+		if (si2168)
+			if (!dvb_attach(si2157_attach, adapter->fe,
+				&i2c->i2c_adapter, &si2157_cfg)) {
+				dvb_frontend_detach(adapter->fe);
+				goto exit;
+			}
 
 		dprintk(SAA716x_ERROR, 1, "Done!");
 	}
@@ -5116,11 +5196,23 @@ static int saa716x_tbs6281_frontend_attach(struct saa716x_adapter *adapter, int 
 		msleep(100);
 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6281FE %d", count);
-		adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6281fe_config,
-                                	count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter);
+
+		if (si2168)
+			adapter->fe = dvb_attach(si2168_attach, &si2168_cfg0,
+							count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter);
+		else
+			adapter->fe = dvb_attach(tbs62x1fe_attach, &tbs6281fe_config,
+							count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter);
 
 		if (!adapter->fe)
 			goto exit;
+
+		if (si2168)
+			if (!dvb_attach(si2157_attach, adapter->fe,
+				count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter, &si2157_cfg)) {
+				dvb_frontend_detach(adapter->fe);
+				goto exit;
+			}
 
 		tbs_read_mac(&i2c1->i2c_adapter, 160 + 16*count, mac);
 		memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
@@ -5183,29 +5275,37 @@ static int saa716x_tbs6290_frontend_attach(struct saa716x_adapter *adapter, int 
 	if (count == 0 || count == 1) {
 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6290 Frontend %d", count);
-		adapter->fe = tbs6290fe_attach (&tbs6290fe_config, 
-				count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter);
-		if (adapter->fe) {
-			dprintk(SAA716x_ERROR, 1, "TBS6290 Frontend found @0x%02x",
-					tbs6290fe_config.tbs6290fe_address);
-			tbs_read_mac(&i2c1->i2c_adapter, 160 + 16*count, mac);
-			memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
-			printk(KERN_INFO "TurboSight TBS6290 DVB-S2 card port%d MAC=%pM\n",
-			count, adapter->dvb_adapter.proposed_mac);
-			saa716x_gpio_set_input(saa716x, count ? 6 : 2);
-			msleep(1);
-			saa716x_gpio_set_input(saa716x, count ? 3 : 14);
-			msleep(1);
-			saa716x_gpio_set_output(saa716x, count ? 17 : 20);
-			msleep(1);
+		if (si2168)
+			adapter->fe = dvb_attach(si2168_attach, &si2168_cfg0,
+							count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter);
+		else
+			adapter->fe = dvb_attach(tbs6290fe_attach, &tbs6290fe_config,
+							count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter);
 
-			ret = tbsci_i2c_probe(adapter, count ? 3 : 4);
-			if (!ret) 
-				tbsci_init(adapter, count, 9);
-
-		} else {
+		if (!adapter->fe)
 			goto exit;
-		}
+
+		if (si2168)
+			if (!dvb_attach(si2157_attach, adapter->fe,
+				count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter, &si2157_cfg)) {
+				dvb_frontend_detach(adapter->fe);
+				goto exit;
+			}
+
+		tbs_read_mac(&i2c1->i2c_adapter, 160 + 16*count, mac);
+		memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
+		printk(KERN_INFO "TurboSight TBS6290 DVB-S2 card port%d MAC=%pM\n",
+		count, adapter->dvb_adapter.proposed_mac);
+		saa716x_gpio_set_input(saa716x, count ? 6 : 2);
+		msleep(1);
+		saa716x_gpio_set_input(saa716x, count ? 3 : 14);
+		msleep(1);
+		saa716x_gpio_set_output(saa716x, count ? 17 : 20);
+		msleep(1);
+
+		ret = tbsci_i2c_probe(adapter, count ? 3 : 4);
+		if (!ret) 
+			tbsci_init(adapter, count, 9);
 
 		dprintk(SAA716x_ERROR, 1, "Done!");
 	}
