@@ -55,7 +55,7 @@ static unsigned int cxd2820r = 1;
 module_param(cxd2820r, int, 0644);
 MODULE_PARM_DESC(cxd2820r, "Enable open-source TDA18212/CXD2820r drivers for TBS5280: default 1");
 
-static unsigned int si2168 = 0;
+static unsigned int si2168 = 1;
 module_param(si2168, int, 0644);
 MODULE_PARM_DESC(si2168, "Enable open-source Si2157/2168 drivers for TBS5281: default 0");
 
@@ -957,8 +957,13 @@ static int dvb_init(struct cx231xx *dev)
 		dvb->frontend->callback = cx231xx_tuner_callback;
 
 		if (cxd2820r)
-			dvb_attach(tda18212_attach, dev->dvb[i]->frontend,
-				&dev->i2c_bus[dev->board.demod_i2c_master].i2c_adap, i ? &tda18212_config1 : &tda18212_config0);
+			if (!dvb_attach(tda18212_attach, dev->dvb[i]->frontend,
+				&dev->i2c_bus[dev->board.demod_i2c_master].i2c_adap,
+				i ? &tda18212_config1 : &tda18212_config0))
+			{
+				result = -EINVAL;
+				goto out_free;
+			}
 		break;
 	case CX231XX_BOARD_TBS_5281:
 
@@ -981,8 +986,12 @@ static int dvb_init(struct cx231xx *dev)
 		dvb->frontend->callback = cx231xx_tuner_callback;
 
 		if (si2168)
-			dvb_attach(si2157_attach, dev->dvb[i]->frontend,
-				&dev->i2c_bus[dev->board.demod_i2c_master + 1].i2c_adap, &si2157_cfg);
+			if (!dvb_attach(si2157_attach, dev->dvb[i]->frontend,
+				&dev->i2c_bus[dev->board.demod_i2c_master + 1].i2c_adap, &si2157_cfg))
+			{
+				result = -EINVAL;
+				goto out_free;
+			}
 
 		break;
 	case CX231XX_BOARD_TBS_5990:
