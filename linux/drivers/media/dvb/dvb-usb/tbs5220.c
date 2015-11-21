@@ -13,6 +13,8 @@
 #include "tbs5220.h"
 #include "tbs5220fe.h"
 #include "tbs5220ctrl.h"
+#include "si2168.h"
+#include "si2157.h"
 
 #define TBS5220_READ_MSG 0
 #define TBS5220_WRITE_MSG 1
@@ -28,6 +30,10 @@ static int dvb_usb_tbs5220_debug;
 module_param_named(debug, dvb_usb_tbs5220_debug, int, 0644);
 MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." 
 							DVB_USB_DEBUG_STATUS);
+
+static unsigned int si2168 = 1;
+module_param(si2168, int, 0644);
+MODULE_PARM_DESC(si2168, "Enable open-source Si2157/2168 drivers: default 0");
 
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 
@@ -127,11 +133,34 @@ static u32 tbs5220_i2c_func(struct i2c_adapter *adapter)
 	return I2C_FUNC_I2C;
 }
 
+static int ctrl1(struct usb_device *dev, u8 *a)
+{
+	info("tbs5220ctrl1 (%d,%d)",a[0],a[1]);
+	return tbs5220ctrl1(dev,a);
+}
+
+static int ctrl2(struct usb_device *dev, u8 *a)
+{
+	info("tbs5220ctrl2 (%d,%d)",a[0],a[1]);
+	return tbs5220ctrl2(dev,a);
+}
+
 static struct tbs5220fe_config tbs5220fe_config = {
 	.tbs5220fe_address = 0x64,
 
-	.tbs5220_ctrl1 = tbs5220ctrl1,
-	.tbs5220_ctrl2 = tbs5220ctrl2,
+	.tbs5220_ctrl1 = ctrl1,
+	.tbs5220_ctrl2 = ctrl2,
+};
+
+static struct si2157_config si2157_cfg = {
+	.i2c_addr = 0x60,
+	.if_port = 1,
+};
+
+static struct si2168_config si2168_cfg = {
+	.i2c_addr = 0x64,
+	.ts_mode = SI2168_TS_PARALLEL,
+	.ts_clock_gapped = 1,
 };
 
 static struct i2c_algorithm tbs5220_i2c_algo = {
@@ -172,15 +201,39 @@ static int tbs5220_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
 
 static struct dvb_usb_device_properties tbs5220_properties;
 
+static int tbs5220_tuner_attach(struct dvb_usb_adapter *adap)
+{
+	if (!si2168)	return 0;
+
+	if (!dvb_attach(si2157_attach, adap->fe[0], &adap->dev->i2c_adap,
+		&si2157_cfg))
+		return -EIO;
+
+	return 0;
+}
+
 static int tbs5220_frontend_attach(struct dvb_usb_adapter *d)
 {
 	u8 buf[20];
 
-	if (tbs5220_properties.adapter->tuner_attach == NULL) {
-		d->fe[0] = dvb_attach(tbs5220fe_attach, &tbs5220fe_config,
-			&d->dev->i2c_adap);
+	if (tbs5220_properties.adapter->tuner_attach == tbs5220_tuner_attach) {
+		if (si2168)
+			d->fe[0] = dvb_attach(si2168_attach, &si2168_cfg,
+				&d->dev->i2c_adap);
+		else
+			d->fe[0] = dvb_attach(tbs5220fe_attach, &tbs5220fe_config,
+				&d->dev->i2c_adap);
+
 		if (d->fe[0] != NULL) {
-			info("Attached TBS5220FE!\n");
+			buf[0] = 16;
+			buf[1] = 185;
+			tbs5220_op_rw(d->dev->udev, 0xb7, 0, 0,
+					buf, 2, TBS5220_WRITE_MSG);
+
+			buf[0] = 8;
+			buf[1] = 1;
+			tbs5220_op_rw(d->dev->udev, 0x8a, 0, 0,
+					buf, 2, TBS5220_WRITE_MSG);
 
 			buf[0] = 7;
 			buf[1] = 1;
@@ -364,7 +417,7 @@ static struct dvb_usb_device_properties tbs5220_properties = {
 		{
 			.frontend_attach = tbs5220_frontend_attach,
 			.streaming_ctrl = NULL,
-			.tuner_attach = NULL,
+			.tuner_attach = tbs5220_tuner_attach,
 			.stream = {
 				.type = USB_BULK,
 				.count = 8,

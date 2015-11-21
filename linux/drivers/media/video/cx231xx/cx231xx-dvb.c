@@ -37,6 +37,8 @@
 #include "tda18212.h"
 #include "cxd2820r.h"
 #include "tbs5281fe.h"
+#include "si2168.h"
+#include "si2157.h"
 #include "tbs5990fe.h"
 #include "tbs5926fe.h"
 #include "tbscxci.h"
@@ -51,7 +53,11 @@ MODULE_PARM_DESC(debug, "enable debug messages [dvb]");
 
 static unsigned int cxd2820r = 1;
 module_param(cxd2820r, int, 0644);
-MODULE_PARM_DESC(cxd2820r, "Enable open-source TDA18212/CXD2820r drivers: default 1");
+MODULE_PARM_DESC(cxd2820r, "Enable open-source TDA18212/CXD2820r drivers for TBS5280: default 1");
+
+static unsigned int si2168 = 0;
+module_param(si2168, int, 0644);
+MODULE_PARM_DESC(si2168, "Enable open-source Si2157/2168 drivers for TBS5281: default 0");
 
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 
@@ -274,6 +280,16 @@ static struct tda18212_config tda18212_config0 = {
 	.if_dvbc = 5000,
 	.loop_through = 1,
 	.xtout = 1
+};
+
+static struct si2157_config si2157_cfg = {
+	.i2c_addr = 0x60,
+	.if_port = 1,
+};
+
+static struct si2168_config si2168_cfg = {
+	.i2c_addr = 0x64,
+	.ts_mode = SI2168_TS_SERIAL,
 };
 
 static struct tda18212_config tda18212_config1 = {
@@ -946,9 +962,13 @@ static int dvb_init(struct cx231xx *dev)
 		break;
 	case CX231XX_BOARD_TBS_5281:
 
-		dev->dvb[i]->frontend = dvb_attach(tbs5281fe_attach,
-						&tbs5281fe_config,
-						&dev->i2c_bus[dev->board.demod_i2c_master + i].i2c_adap);
+		if (si2168)
+			dev->dvb[i]->frontend = dvb_attach(si2168_attach, &si2168_cfg,
+							&dev->i2c_bus[dev->board.demod_i2c_master + i].i2c_adap);
+		else
+			dev->dvb[i]->frontend = dvb_attach(tbs5281fe_attach,
+							&tbs5281fe_config,
+							&dev->i2c_bus[dev->board.demod_i2c_master + i].i2c_adap);
 
 		if (dev->dvb[i]->frontend == NULL) {
 			printk(DRIVER_NAME
@@ -959,6 +979,10 @@ static int dvb_init(struct cx231xx *dev)
 		
 		/* define general-purpose callback pointer */
 		dvb->frontend->callback = cx231xx_tuner_callback;
+
+		if (si2168)
+			dvb_attach(si2157_attach, dev->dvb[i]->frontend,
+				&dev->i2c_bus[dev->board.demod_i2c_master + 1].i2c_adap, &si2157_cfg);
 
 		break;
 	case CX231XX_BOARD_TBS_5990:
