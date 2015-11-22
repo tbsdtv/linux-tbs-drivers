@@ -961,6 +961,7 @@ static int dvb_init(struct cx231xx *dev)
 				&dev->i2c_bus[dev->board.demod_i2c_master].i2c_adap,
 				i ? &tda18212_config1 : &tda18212_config0))
 			{
+				dvb_frontend_detach(dev->dvb[i]->frontend);
 				result = -EINVAL;
 				goto out_free;
 			}
@@ -989,6 +990,7 @@ static int dvb_init(struct cx231xx *dev)
 			if (!dvb_attach(si2157_attach, dev->dvb[i]->frontend,
 				&dev->i2c_bus[dev->board.demod_i2c_master + 1].i2c_adap, &si2157_cfg))
 			{
+				dvb_frontend_detach(dev->dvb[i]->frontend);
 				result = -EINVAL;
 				goto out_free;
 			}
