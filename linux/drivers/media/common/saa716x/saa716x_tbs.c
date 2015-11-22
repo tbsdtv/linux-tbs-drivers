@@ -2606,7 +2606,7 @@ static int saa716x_tbs6220_frontend_attach(struct saa716x_adapter *adapter, int 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6220FE %d", count);
 		if (cxd2820r)
 		{
-			adapter->fe = cxd2820r_attach(&cxd2820r_config0, &i2c->i2c_adapter,NULL);
+			adapter->fe = dvb_attach(cxd2820r_attach,&cxd2820r_config0, &i2c->i2c_adapter,NULL);
 			if (!adapter->fe)
 				goto exit;
 
@@ -2691,7 +2691,7 @@ static int saa716x_tbs6280_frontend_attach(struct saa716x_adapter *adapter, int 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6280FE %d", count);
 		if (cxd2820r)
 		{
-			adapter->fe = cxd2820r_attach(&cxd2820r_config0, &i2c0->i2c_adapter, NULL);
+			adapter->fe = dvb_attach(cxd2820r_attach,&cxd2820r_config0, &i2c0->i2c_adapter, NULL);
 			if (!adapter->fe)
 				goto exit;
 
@@ -2720,7 +2720,7 @@ static int saa716x_tbs6280_frontend_attach(struct saa716x_adapter *adapter, int 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS62x0FE %d", count);
 		if (cxd2820r)
 		{
-			adapter->fe = cxd2820r_attach(&cxd2820r_config1, &i2c0->i2c_adapter, NULL);
+			adapter->fe = dvb_attach(cxd2820r_attach,&cxd2820r_config1, &i2c0->i2c_adapter, NULL);
 			if (!adapter->fe)
 				goto exit;
 
@@ -3057,7 +3057,7 @@ static int saa716x_tbs6925_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 0 ) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6925 Frontend %d", count);
-		adapter->fe = stv090x_attach (&stv0900_config, &i2c0->i2c_adapter, 
+		adapter->fe = dvb_attach(stv090x_attach,&stv0900_config, &i2c0->i2c_adapter, 
 								STV090x_DEMODULATOR_0);
 		if (adapter->fe) {
 				dprintk(SAA716x_ERROR, 1, "TBS6925 Frontend found @0x%02x",
@@ -3266,7 +3266,7 @@ static int saa716x_tbs6992_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 0 || count == 1) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6992 Frontend %d", count);
-		adapter->fe = stv090x_attach (&tbs6992fe_config, &i2c->i2c_adapter, 
+		adapter->fe = dvb_attach(stv090x_attach,&tbs6992fe_config, &i2c->i2c_adapter, 
 					count ? STV090x_DEMODULATOR_1 : STV090x_DEMODULATOR_0);
 		if (adapter->fe) {
 				dprintk(SAA716x_ERROR, 1, "TBS6992 Frontend found @0x%02x",
@@ -3367,7 +3367,7 @@ static int saa716x_tbs6922_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 0 ) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6922 Frontend %d", count);
-		adapter->fe = tbs6922fe_attach (&tbs6922_fe_config, &i2c0->i2c_adapter);
+		adapter->fe = dvb_attach(tbs6922fe_attach,&tbs6922_fe_config,&i2c0->i2c_adapter);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6922 Frontend found @0x%02x",
 					tbs6922_fe_config.tbs6922fe_address);
@@ -3439,7 +3439,7 @@ static int saa716x_tbs6928_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 0 ) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6928 Frontend %d", count);
-		adapter->fe = tbs6928fe_attach (&tbs6928_fe_config, &i2c0->i2c_adapter);
+		adapter->fe = dvb_attach(tbs6928fe_attach,&tbs6928_fe_config, &i2c0->i2c_adapter);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6928 Frontend found @0x%02x",
 					tbs6928_fe_config.tbs6928fe_address);
@@ -3534,7 +3534,7 @@ static int saa716x_tbs6928se_frontend_attach(struct saa716x_adapter *adapter, in
 
 	if (count == 0 ) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6928SE Frontend %d", count);
-		adapter->fe = tbs6928se_attach (&tbs6928se_fe_config, &i2c0->i2c_adapter);
+		adapter->fe = dvb_attach(tbs6928se_attach,&tbs6928se_fe_config, &i2c0->i2c_adapter);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6928SE Frontend found @0x%02x",
 					tbs6928se_fe_config.tbs6928se_address);
@@ -3626,7 +3626,7 @@ static int saa716x_tbs6284_frontend_attach(struct saa716x_adapter *adapter, int 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS62x0FE %d", count);
 		if (cxd2820r)
 		{
-			adapter->fe = cxd2820r_attach(&cxd2820r_config0, &i2c1->i2c_adapter, NULL);
+			adapter->fe = dvb_attach(cxd2820r_attach,&cxd2820r_config0, &i2c1->i2c_adapter, NULL);
 			if (!adapter->fe)
 				goto exit;
 
@@ -3655,7 +3655,7 @@ static int saa716x_tbs6284_frontend_attach(struct saa716x_adapter *adapter, int 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS62x0FE %d", count);
 		if (cxd2820r)
 		{
-			adapter->fe = cxd2820r_attach(&cxd2820r_config1, &i2c1->i2c_adapter, NULL);
+			adapter->fe = dvb_attach(cxd2820r_attach,&cxd2820r_config1, &i2c1->i2c_adapter, NULL);
 			if (!adapter->fe)
 				goto exit;
 
@@ -3693,7 +3693,7 @@ static int saa716x_tbs6284_frontend_attach(struct saa716x_adapter *adapter, int 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS62x0FE %d", count);
 		if (cxd2820r)
 		{
-			adapter->fe = cxd2820r_attach(&cxd2820r_config0, &i2c0->i2c_adapter, NULL);
+			adapter->fe = dvb_attach(cxd2820r_attach,&cxd2820r_config0, &i2c0->i2c_adapter, NULL);
 			if (!adapter->fe)
 				goto exit;
 
@@ -3722,7 +3722,7 @@ static int saa716x_tbs6284_frontend_attach(struct saa716x_adapter *adapter, int 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS62x0FE %d", count);
 		if (cxd2820r)
 		{
-			adapter->fe = cxd2820r_attach(&cxd2820r_config1, &i2c0->i2c_adapter, NULL);
+			adapter->fe = dvb_attach(cxd2820r_attach,&cxd2820r_config1, &i2c0->i2c_adapter, NULL);
 			if (!adapter->fe)
 				goto exit;
 
@@ -3820,7 +3820,7 @@ static int saa716x_tbs6982_frontend_attach(struct saa716x_adapter *adapter, int 
 		msleep(100);
 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6982 Frontend %d", count);
-		adapter->fe = tbs6982fe_attach (&tbs6982_fe_config, 
+		adapter->fe = dvb_attach(tbs6982fe_attach,&tbs6982_fe_config, 
 				count ? &i2c0->i2c_adapter : &i2c1->i2c_adapter, count);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6982 Frontend found @0x%02x",
@@ -3902,7 +3902,7 @@ static int saa716x_tbs6982se_frontend_attach(struct saa716x_adapter *adapter, in
 		msleep(100);
 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6982SE Frontend %d", count);
-		adapter->fe = tbs6982se_attach (count ? &tbs6982se_fe_config1: &tbs6982se_fe_config0, 
+		adapter->fe = dvb_attach(tbs6982se_attach,count ? &tbs6982se_fe_config1: &tbs6982se_fe_config0, 
 				count ? &i2c0->i2c_adapter : &i2c1->i2c_adapter, count);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6982SE Frontend found @0x%02x",
@@ -3979,7 +3979,7 @@ static int saa716x_tbs6983_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 0 || count == 1) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6983 Frontend %d", count);
-		adapter->fe = tbs6983fe_attach (&tbs6983_fe_config, &i2c0->i2c_adapter, count);
+		adapter->fe = dvb_attach(tbs6983fe_attach,&tbs6983_fe_config, &i2c0->i2c_adapter, count);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6983 Frontend found @0x%02x",
 					tbs6983_fe_config.tbs6983fe_address);
@@ -4061,7 +4061,7 @@ static int saa716x_tbs6985se_frontend_attach(struct saa716x_adapter *adapter, in
 		msleep(100);
 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6985SE Frontend %d", count);
-		adapter->fe = tbs6985se_attach (count ? &tbs6985se_fe_config0: &tbs6985se_fe_config1, 
+		adapter->fe = dvb_attach(tbs6985se_attach,count ? &tbs6985se_fe_config0: &tbs6985se_fe_config1, 
 				count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter, count ? 0 : 1);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6985SE Frontend found @0x%02x",
@@ -4138,7 +4138,7 @@ static int saa716x_tbs6991_frontend_attach(struct saa716x_adapter *adapter, int 
 		msleep(100);
 		
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6991 Frontend %d", count);
-		adapter->fe = tbs6991fe_attach (&tbs6991_fe_config, 
+		adapter->fe = dvb_attach(tbs6991fe_attach,&tbs6991_fe_config, 
 				count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter, count);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6991 Frontend found @0x%02x",
@@ -4231,7 +4231,7 @@ static int saa716x_tbs6991se_frontend_attach(struct saa716x_adapter *adapter, in
 	if (count == 0 || count == 1) {
 
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6991SE Frontend %d", count);
-		adapter->fe = tbs6991se_attach (&tbs6991se_fe_config, 
+		adapter->fe = dvb_attach(tbs6991se_attach,&tbs6991se_fe_config, 
 				count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter, count);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6991SE Frontend found @0x%02x",
@@ -4319,7 +4319,7 @@ static int saa716x_tbs6618_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 0 ) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6618 Frontend %d", count);
-		adapter->fe = tbs6618fe_attach (&tbs6618_fe_config, &i2c0->i2c_adapter);
+		adapter->fe = dvb_attach(tbs6618fe_attach,&tbs6618_fe_config, &i2c0->i2c_adapter);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6618 Frontend found @0x%02x",
 					tbs6618_fe_config.tbs6618fe_address);
@@ -4400,7 +4400,7 @@ static int saa716x_tbs6680_frontend_attach(struct saa716x_adapter *adapter, int 
 		msleep(100);
 		
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6680 Frontend %d", count);
-		adapter->fe = tbs6680fe_attach (&tbs6680_fe_config, 
+		adapter->fe = dvb_attach(tbs6680fe_attach,&tbs6680_fe_config,
 				count ? &i2c1->i2c_adapter : &i2c0->i2c_adapter);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6680 Frontend found @0x%02x",
@@ -4618,7 +4618,7 @@ static int saa716x_tbs6926_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 0 ) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6926 Frontend %d", count);
-		adapter->fe = stv090x_attach (&tbs6926fe_config, &i2c0->i2c_adapter, 
+		adapter->fe = dvb_attach(stv090x_attach,&tbs6926fe_config, &i2c0->i2c_adapter, 
 								STV090x_DEMODULATOR_0);
 		if (adapter->fe) {
 				dprintk(SAA716x_ERROR, 1, "TBS6926 Frontend found @0x%02x",
@@ -4702,7 +4702,7 @@ static int saa716x_tbs6923_frontend_attach(struct saa716x_adapter *adapter, int 
 
 	if (count == 0 ) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6923 Frontend %d", count);
-		adapter->fe = tbs6923fe_attach (&tbs6923_fe_config, &i2c0->i2c_adapter);
+		adapter->fe = dvb_attach(tbs6923fe_attach,&tbs6923_fe_config, &i2c0->i2c_adapter);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TBS6923 Frontend found @0x%02x",
 					tbs6923_fe_config.tbs6923fe_address);
@@ -4794,7 +4794,7 @@ static int saa716x_tbs6925ve_frontend_attach(struct saa716x_adapter *adapter, in
 
 	if (count == 0 ) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TBS6925VE Frontend %d", count);
-		adapter->fe = stv090x_attach (&stv0903_config, &i2c0->i2c_adapter, 
+		adapter->fe = dvb_attach(stv090x_attach,&stv0903_config, &i2c0->i2c_adapter, 
 								STV090x_DEMODULATOR_0);
 		if (adapter->fe) {
 				dprintk(SAA716x_ERROR, 1, "TBS6925VE Frontend found @0x%02x",
@@ -4875,7 +4875,7 @@ static int saa716x_tt_s2_4100_frontend_attach(struct saa716x_adapter *adapter, i
 
 	if (count == 0 ) {
 		dprintk(SAA716x_ERROR, 1, "Probing for TT-budget S2-4100");
-		adapter->fe = tt_s2_4100_attach (&tt_s2_4100_drv_config, &i2c0->i2c_adapter);
+		adapter->fe = dvb_attach(tt_s2_4100_attach,&tt_s2_4100_drv_config, &i2c0->i2c_adapter);
 		if (adapter->fe) {
 			dprintk(SAA716x_ERROR, 1, "TT-budget S2-4100 found @0x%02x",
 					tt_s2_4100_drv_config.tt_s2_4100_addr);
