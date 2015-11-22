@@ -19,6 +19,9 @@
 #include "tbs6704fe.h"
 #include "tbs6909fe.h"
 
+#include "si2168.h"
+#include "si2157.h"
+
 DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
 
 unsigned int tbs_int_type;
@@ -32,6 +35,10 @@ MODULE_PARM_DESC(tbs_mode_single, "default 0, 1: Single mode for 6908/03");
 unsigned int tbs6909_mode = 1;
 module_param(tbs6909_mode, int, 0644);
 MODULE_PARM_DESC(tbs6909_mode, "default 0, 1: Multi-switch");
+
+static unsigned int si2168 = 0;
+module_param(si2168, int, 0644);
+MODULE_PARM_DESC(si2168, "Enable open-source Si2157/2168 drivers for TBS 6205 cards: default 0");
 
 extern int tbs_ci_init(struct tbs_adapter *adap, int nr);
 extern void tbs_ci_release(struct tbs_adapter *adap);
@@ -1573,6 +1580,16 @@ static struct tbs6205fe_config tbs6205_fe_config = {
 	.tbs6205_ctl2 = tbsdvbctl2,
 };
 
+static struct si2157_config si2157_cfg = {
+	.i2c_addr = 0x60,
+	.if_port = 1
+};
+
+static struct si2168_config si2168_cfg = {
+	.i2c_addr = 0x64,
+	.ts_mode = SI2168_TS_PARALLEL
+};
+
 static int tbs6205fe_frontend_attach(struct tbs_adapter *adapter, int type)
 {
 	struct i2c_adapter *i2c = &adapter->i2c->i2c_adap;
@@ -1590,10 +1607,19 @@ static int tbs6205fe_frontend_attach(struct tbs_adapter *adapter, int type)
 		tbs_pcie_gpio_write(dev, adapter->count ? 2 : 0, 0, 1);
 		msleep(100);
 
-		adapter->fe = dvb_attach(tbs6205fe_attach, &tbs6205_fe_config, i2c);
+		if (si2168)
+			adapter->fe = dvb_attach(si2168_attach, &si2168_cfg, i2c);
+		else
+			adapter->fe = dvb_attach(tbs6205fe_attach, &tbs6205_fe_config, i2c);
 
 		if (!adapter->fe) 
 			goto exit;
+
+		if (si2168)
+			if (!dvb_attach(si2157_attach, adapter->fe, i2c, &si2157_cfg)) {
+				dvb_frontend_detach(adapter->fe);
+				goto exit;
+			}
 
 		tbs_pcie_mac(i2c0, adapter->count, mac);
 		memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
@@ -1608,10 +1634,19 @@ static int tbs6205fe_frontend_attach(struct tbs_adapter *adapter, int type)
 		tbs_pcie_gpio_write(dev, (adapter->count-2) ? 3 : 1, 0, 1);
 		msleep(100);
 
-		adapter->fe = dvb_attach(tbs6205fe_attach, &tbs6205_fe_config, i2c);
+		if (si2168)
+			adapter->fe = dvb_attach(si2168_attach, &si2168_cfg, i2c);
+		else
+			adapter->fe = dvb_attach(tbs6205fe_attach, &tbs6205_fe_config, i2c);
 
-		if (!adapter->fe)
+		if (!adapter->fe) 
 			goto exit;
+
+		if (si2168)
+			if (!dvb_attach(si2157_attach, adapter->fe, i2c, &si2157_cfg)) {
+				dvb_frontend_detach(adapter->fe);
+				goto exit;
+			}
 
 		tbs_pcie_mac(i2c0, adapter->count, mac);
 		memcpy(adapter->dvb_adapter.proposed_mac, mac, 6);
