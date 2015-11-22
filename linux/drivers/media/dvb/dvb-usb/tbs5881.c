@@ -40,7 +40,7 @@ static int dvb_usb_tbs5881_debug;
 module_param_named(debug, dvb_usb_tbs5881_debug, int, 0644);
 MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." 
 							DVB_USB_DEBUG_STATUS);
-static unsigned int si2168 = 0;
+static unsigned int si2168 = 1;
 module_param(si2168, int, 0644);
 MODULE_PARM_DESC(si2168, "Enable open-source Si2157/2168 drivers: default 0");
 
@@ -449,23 +449,11 @@ static u32 tbs5881_i2c_func(struct i2c_adapter *adapter)
 	return I2C_FUNC_I2C;
 }
 
-static int ctrl1(struct usb_device *dev, u8 *a)
-{
-	info("tbs5881ctrl1 (%d,%d)",a[0],a[1]);
-	return tbs5881ctrl1(dev,a);
-}
-
-static int ctrl2(struct usb_device *dev, u8 *a)
-{
-	info("tbs5881ctrl2 (%d,%d)",a[0],a[1]);
-	return tbs5881ctrl2(dev,a);
-}
-
 static struct tbs5881fe_config tbs5881fe_config = {
 	.tbs5881fe_address = 0x64,
 
-	.tbs5881_ctrl1 = ctrl1,
-	.tbs5881_ctrl2 = ctrl2,
+	.tbs5881_ctrl1 = tbs5881ctrl1,
+	.tbs5881_ctrl2 = tbs5881ctrl2,
 };
 
 static struct si2157_config si2157_cfg = {
@@ -544,8 +532,8 @@ static int tbs5881_frontend_attach(struct dvb_usb_adapter *d)
 				&d->dev->i2c_adap);
 
 		if (d->fe[0] != NULL) {
-			buf[0] = 16;
-			buf[1] = 185;
+			buf[0] = 0;
+			buf[1] = 0;
 			tbs5881_op_rw(d->dev->udev, 0xb7, 0, 0,
 					buf, 2, TBS5881_WRITE_MSG);
 

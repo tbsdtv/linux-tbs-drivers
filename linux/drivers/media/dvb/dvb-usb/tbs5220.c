@@ -133,23 +133,11 @@ static u32 tbs5220_i2c_func(struct i2c_adapter *adapter)
 	return I2C_FUNC_I2C;
 }
 
-static int ctrl1(struct usb_device *dev, u8 *a)
-{
-	info("tbs5220ctrl1 (%d,%d)",a[0],a[1]);
-	return tbs5220ctrl1(dev,a);
-}
-
-static int ctrl2(struct usb_device *dev, u8 *a)
-{
-	info("tbs5220ctrl2 (%d,%d)",a[0],a[1]);
-	return tbs5220ctrl2(dev,a);
-}
-
 static struct tbs5220fe_config tbs5220fe_config = {
 	.tbs5220fe_address = 0x64,
 
-	.tbs5220_ctrl1 = ctrl1,
-	.tbs5220_ctrl2 = ctrl2,
+	.tbs5220_ctrl1 = tbs5220ctrl1,
+	.tbs5220_ctrl2 = tbs5220ctrl2,
 };
 
 static struct si2157_config si2157_cfg = {
@@ -225,8 +213,8 @@ static int tbs5220_frontend_attach(struct dvb_usb_adapter *d)
 				&d->dev->i2c_adap);
 
 		if (d->fe[0] != NULL) {
-			buf[0] = 16;
-			buf[1] = 185;
+			buf[0] = 0;
+			buf[1] = 0;
 			tbs5220_op_rw(d->dev->udev, 0xb7, 0, 0,
 					buf, 2, TBS5220_WRITE_MSG);
 

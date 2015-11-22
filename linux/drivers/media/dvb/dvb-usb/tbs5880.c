@@ -517,15 +517,9 @@ static void tbs5880_led_ctrl(struct dvb_frontend *fe, int offon)
 
 static struct dvb_usb_device_properties tbs5880_properties;
 
-static int ctrl(struct usb_device *dev, u8 *a)
-{
-	info("tbs5880ctrl (%d,%d)",a[0],a[1]);
-	return tbs5880ctrl(dev,a);
-}
-
 static struct tbs5880fe_config tbs5880fe_config = {
 	.tbs5880fe_address = 0x6c,
-	.tbs5880_ctrl = ctrl,
+	.tbs5880_ctrl = tbs5880ctrl,
 };
 
 static struct cxd2820r_config cxd2820r_config = {
@@ -574,19 +568,15 @@ static int tbs5880_frontend_attach(struct dvb_usb_adapter *d)
 
 	if (tbs5880_properties.adapter->tuner_attach == &tbs5880_tuner_attach) {
 		if (cxd2820r)
-		{
 			d->fe[0] = dvb_attach(cxd2820r_attach, &cxd2820r_config,
 				&d->dev->i2c_adap,NULL);
-		}
 		else
-		{
 			d->fe[0] = dvb_attach(tbs5880fe_attach, &tbs5880fe_config,
 				&d->dev->i2c_adap);
-		}
 
 		if (d->fe[0] != NULL) {
-			buf[0] = 16;
-			buf[1] = 185;
+			buf[0] = 0;
+			buf[1] = 0;
 			tbs5880_op_rw(d->dev->udev, 0xb7, 0, 0,
 					buf, 2, TBS5880_WRITE_MSG);
 
