@@ -474,6 +474,9 @@ static int si2168_init(struct dvb_frontend *fe)
 	struct si2168_cmd cmd;
 	unsigned int chip_id;
 
+	if (state->active)
+		return 0;
+
 	/* initialize */
 	memcpy(cmd.args, "\xc0\x12\x00\x0c\x00\x0d\x16\x00\x00\x00\x00\x00\x00", 13);
 	cmd.wlen = 13;
