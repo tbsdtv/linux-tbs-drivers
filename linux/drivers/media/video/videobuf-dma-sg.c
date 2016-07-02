@@ -182,10 +182,17 @@ static int videobuf_dma_init_user_locked(struct videobuf_dmabuf *dma,
 	dprintk(1, "init user [0x%lx+0x%lx => %d pages]\n",
 		data, size, dma->nr_pages);
 
-	err = get_user_pages(current, current->mm,
+	#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
+			err = get_user_pages(current, current->mm,
 			     data & PAGE_MASK, dma->nr_pages,
 			     rw == READ, 1, /* force */
 			     dma->pages, NULL);
+	#else
+			err = get_user_pages(data & PAGE_MASK, dma->nr_pages,
+			     rw == READ, 1, /* force */
+			     dma->pages,NULL);
+	#endif
+
 
 	if (err != dma->nr_pages) {
 		dma->nr_pages = (err >= 0) ? err : 0;
@@ -317,7 +324,13 @@ int videobuf_dma_free(struct videobuf_dmabuf *dma)
 
 	if (dma->pages) {
 		for (i = 0; i < dma->nr_pages; i++)
-			page_cache_release(dma->pages[i]);
+			#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
+				page_cache_release(dma->pages[i]);
+			#else
+				release_pages(dma->pages,i,true);
+			#endif			
+		
+			
 		kfree(dma->pages);
 		dma->pages = NULL;
 	}

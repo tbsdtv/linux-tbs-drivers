@@ -147,13 +147,26 @@ static void *vb2_dma_sg_get_userptr(void *alloc_ctx, unsigned long vaddr,
 		goto userptr_fail_pages_array_alloc;
 
 	down_read(&current->mm->mmap_sem);
-	num_pages_from_user = get_user_pages(current, current->mm,
-					     vaddr & PAGE_MASK,
-					     buf->sg_desc.num_pages,
-					     write,
-					     1, /* force */
-					     buf->pages,
-					     NULL);
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
+			num_pages_from_user = get_user_pages(current, current->mm,
+								 vaddr & PAGE_MASK,
+								 buf->sg_desc.num_pages,
+								 write,
+								 1, /* force */
+								 buf->pages,
+								 NULL);
+
+#else
+			num_pages_from_user = get_user_pages(vaddr & PAGE_MASK,
+								 buf->sg_desc.num_pages,
+								 write,
+								 1, /* force */
+								 buf->pages,NULL);
+#endif	
+
+	
+
 	up_read(&current->mm->mmap_sem);
 	if (num_pages_from_user != buf->sg_desc.num_pages)
 		goto userptr_fail_get_user_pages;

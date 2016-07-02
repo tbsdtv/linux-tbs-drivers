@@ -133,8 +133,13 @@ int ivtv_udma_setup(struct ivtv *itv, unsigned long ivtv_dest_addr,
 
 	/* Get user pages for DMA Xfer */
 	down_read(&current->mm->mmap_sem);
+	#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
 	err = get_user_pages(current, current->mm,
 			user_dma.uaddr, user_dma.page_count, 0, 1, dma->map, NULL);
+	#else
+	err = get_user_pages(user_dma.uaddr, user_dma.page_count, 0, 1, dma->map, NULL);
+	#endif	
+	
 	up_read(&current->mm->mmap_sem);
 
 	if (user_dma.page_count != err) {
