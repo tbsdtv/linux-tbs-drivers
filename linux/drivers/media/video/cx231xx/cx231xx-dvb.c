@@ -1066,7 +1066,7 @@ static int dvb_init(struct cx231xx *dev)
 
 		if (si2168)
 			if (!dvb_attach(si2157_attach, dev->dvb[i]->frontend,
-				&dev->i2c_bus[dev->board.demod_i2c_master + 1].i2c_adap, &si2157_cfg))
+				&dev->i2c_bus[dev->board.demod_i2c_master + i].i2c_adap, &si2157_cfg))
 			{
 				dvb_frontend_detach(dev->dvb[i]->frontend);
 				result = -EINVAL;
