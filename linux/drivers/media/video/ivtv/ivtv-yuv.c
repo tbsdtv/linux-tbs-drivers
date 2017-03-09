@@ -78,9 +78,11 @@ static int ivtv_yuv_prep_user_dma(struct ivtv *itv, struct ivtv_user_dma *dma,
 	down_read(&current->mm->mmap_sem);
 	#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
 	y_pages = get_user_pages(current, current->mm, y_dma.uaddr, y_dma.page_count, 0, 1, &dma->map[0], NULL);
+	#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+                y_pages = get_user_pages(y_dma.uaddr, y_dma.page_count, 0, 1, &dma->map[0], NULL);
 	#else
-	y_pages = get_user_pages(y_dma.uaddr, y_dma.page_count, 0, 1, &dma->map[0], NULL);
-	#endif	
+                y_pages = get_user_pages_unlocked(y_dma.uaddr, y_dma.page_count, &dma->map[0], FOLL_FORCE);
+   	#endif
 	
 	uv_pages = 0; /* silence gcc. value is set and consumed only if: */
 	if (y_pages == y_dma.page_count) {
@@ -90,9 +92,13 @@ static int ivtv_yuv_prep_user_dma(struct ivtv *itv, struct ivtv_user_dma *dma,
 					  uv_dma.uaddr, uv_dma.page_count, 0, 1,
 					  &dma->map[y_pages], NULL);
 
-		#else
+		#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 			uv_pages = get_user_pages(uv_dma.uaddr, uv_dma.page_count, 0, 1,
 					  &dma->map[y_pages], NULL);
+		#else
+                        uv_pages = get_user_pages_unlocked(uv_dma.uaddr,
+                                uv_dma.page_count, &dma->map[y_pages],
+                                FOLL_FORCE);
 		#endif	
 
 	}

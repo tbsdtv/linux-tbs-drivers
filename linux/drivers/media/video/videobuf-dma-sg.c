@@ -158,6 +158,8 @@ static int videobuf_dma_init_user_locked(struct videobuf_dmabuf *dma,
 	unsigned long first, last;
 	int err, rw = 0;
 
+	unsigned int flags = FOLL_FORCE;
+
 	dma->direction = direction;
 	switch (dma->direction) {
 	case DMA_FROM_DEVICE:
@@ -179,6 +181,9 @@ static int videobuf_dma_init_user_locked(struct videobuf_dmabuf *dma,
 	if (NULL == dma->pages)
 		return -ENOMEM;
 
+	if (rw == READ)
+		flags |= FOLL_WRITE;
+
 	dprintk(1, "init user [0x%lx+0x%lx => %d pages]\n",
 		data, size, dma->nr_pages);
 
@@ -187,10 +192,14 @@ static int videobuf_dma_init_user_locked(struct videobuf_dmabuf *dma,
 			     data & PAGE_MASK, dma->nr_pages,
 			     rw == READ, 1, /* force */
 			     dma->pages, NULL);
-	#else
+	#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 			err = get_user_pages(data & PAGE_MASK, dma->nr_pages,
 			     rw == READ, 1, /* force */
 			     dma->pages,NULL);
+	
+	#else
+		 	err = get_user_pages(data & PAGE_MASK, dma->nr_pages,
+			     flags, dma->pages, NULL);
 	#endif
 
 

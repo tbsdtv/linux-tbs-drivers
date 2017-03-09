@@ -1032,8 +1032,10 @@ irqreturn_t ivtv_irq_handler(int irq, void *dev_id)
 	if (test_and_clear_bit(IVTV_F_I_HAVE_WORK, &itv->i_flags)) {
 #if LINUX_VERSION_CODE <= KERNEL_VERSION(2,6,35)
 		queue_work(itv->irq_work_queues, &itv->irq_work_queue);
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
+                queue_kthread_work(&itv->irq_worker, &itv->irq_work);
 #else
-		queue_kthread_work(&itv->irq_worker, &itv->irq_work);
+  		kthread_queue_work(&itv->irq_worker, &itv->irq_work);
 #endif
 	}
 

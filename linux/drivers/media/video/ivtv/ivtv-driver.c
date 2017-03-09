@@ -737,7 +737,7 @@ static int ivtv_init_struct1(struct ivtv *itv)
 	}
 
 	INIT_WORK(&itv->irq_work_queue, ivtv_irq_work_handler);
-#else
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
 	init_kthread_worker(&itv->irq_worker);
 	itv->irq_worker_task = kthread_run(kthread_worker_fn, &itv->irq_worker,
 					   itv->v4l2_dev.name);
@@ -749,6 +749,19 @@ static int ivtv_init_struct1(struct ivtv *itv)
 	sched_setscheduler(itv->irq_worker_task, SCHED_FIFO, &param);
 
 	init_kthread_work(&itv->irq_work, ivtv_irq_work_handler);
+#else
+	kthread_init_worker(&itv->irq_worker);
+        itv->irq_worker_task = kthread_run(kthread_worker_fn, &itv->irq_worker,
+                                           itv->v4l2_dev.name);
+        if (IS_ERR(itv->irq_worker_task)) {
+                IVTV_ERR("Could not create ivtv task\n");
+                return -1;
+        }
+        /* must use the FIFO scheduler as it is realtime sensitive */
+        sched_setscheduler(itv->irq_worker_task, SCHED_FIFO, &param);
+
+        kthread_init_work(&itv->irq_work, ivtv_irq_work_handler);
+
 #endif
 
 	/* start counting open_id at 1 */
@@ -1427,10 +1440,13 @@ static void ivtv_remove(struct pci_dev *pdev)
 	/* Stop all Work Queues */
 	flush_workqueue(itv->irq_work_queues);
 	destroy_workqueue(itv->irq_work_queues);
+#elif LINUX_VERSION_CODE < KERNEL_VERSION(4,9,0)
+        /* Kill irq worker */
+        flush_kthread_worker(&itv->irq_worker);
+        kthread_stop(itv->irq_worker_task);
 #else
-	/* Kill irq worker */
-	flush_kthread_worker(&itv->irq_worker);
-	kthread_stop(itv->irq_worker_task);
+	kthread_flush_worker(&itv->irq_worker);
+        kthread_stop(itv->irq_worker_task);
 #endif
 
 	ivtv_streams_cleanup(itv, 1);
