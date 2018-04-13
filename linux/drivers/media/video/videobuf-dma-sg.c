@@ -411,15 +411,24 @@ static void videobuf_vm_close(struct vm_area_struct *vma)
 static int videobuf_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 	struct page *page;
-
-	dprintk(3, "fault: fault @ %08lx [vma %08lx-%08lx]\n",
-		(unsigned long)vmf->virtual_address,
-		vma->vm_start, vma->vm_end);
+	
+	#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
+		dprintk(3, "fault: fault @ %08lx [vma %08lx-%08lx]\n",  (unsigned long)vmf->virtual_address,vma->vm_start, vma->vm_end);
+	#else
+		dprintk(3, "fault: fault @ %08lx [vma %08lx-%08lx]\n", vmf->address,vma->vm_start, vma->vm_end);
+	#endif
 
 	page = alloc_page(GFP_USER | __GFP_DMA32);
 	if (!page)
 		return VM_FAULT_OOM;
-	clear_user_highpage(page, (unsigned long)vmf->virtual_address);
+	
+        #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
+                clear_user_highpage(page, (unsigned long)vmf->virtual_address);
+        #else
+                clear_user_highpage(page, vmf->address);
+        #endif
+
+
 	vmf->page = page;
 
 	return 0;
