@@ -120,6 +120,10 @@ static void *vb2_dma_sg_get_userptr(void *alloc_ctx, unsigned long vaddr,
 	struct vb2_dma_sg_buf *buf;
 	unsigned long first, last;
 	int num_pages_from_user, i;
+	
+	unsigned int flags = FOLL_FORCE;
+	if (write)
+		flags |= FOLL_WRITE;
 
 	buf = kzalloc(sizeof *buf, GFP_KERNEL);
 	if (!buf)
@@ -147,13 +151,33 @@ static void *vb2_dma_sg_get_userptr(void *alloc_ctx, unsigned long vaddr,
 		goto userptr_fail_pages_array_alloc;
 
 	down_read(&current->mm->mmap_sem);
-	num_pages_from_user = get_user_pages(current, current->mm,
-					     vaddr & PAGE_MASK,
-					     buf->sg_desc.num_pages,
-					     write,
-					     1, /* force */
-					     buf->pages,
-					     NULL);
+
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
+			num_pages_from_user = get_user_pages(current, current->mm,
+								 vaddr & PAGE_MASK,
+								 buf->sg_desc.num_pages,
+								 write,
+								 1, /* force */
+								 buf->pages,
+								 NULL);
+
+#elif  LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+			num_pages_from_user = get_user_pages(vaddr & PAGE_MASK,
+								 buf->sg_desc.num_pages,
+								 write,
+								 1, /* force */
+								 buf->pages,NULL);
+#else
+			num_pages_from_user = get_user_pages(vaddr & PAGE_MASK,
+                                                                 buf->sg_desc.num_pages,
+                                                                 flags,
+                                                                 buf->pages,NULL);		
+	
+#endif	
+
+	
+
 	up_read(&current->mm->mmap_sem);
 	if (num_pages_from_user != buf->sg_desc.num_pages)
 		goto userptr_fail_get_user_pages;

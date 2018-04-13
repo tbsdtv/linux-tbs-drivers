@@ -599,7 +599,11 @@ static int af9015_eeprom_hash(struct usb_device *udev)
 
 	af9015_config.eeprom_sum = 0;
 	for (reg = 0; reg < eeprom_size / sizeof(u32); reg++) {
-		af9015_config.eeprom_sum *= GOLDEN_RATIO_PRIME_32;
+		#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 7, 0)
+			af9015_config.eeprom_sum *= GOLDEN_RATIO_PRIME_32;		
+		#else
+			af9015_config.eeprom_sum *= GOLDEN_RATIO_32;
+		#endif
 		af9015_config.eeprom_sum += le32_to_cpu(((u32 *)eeprom)[reg]);
 	}
 

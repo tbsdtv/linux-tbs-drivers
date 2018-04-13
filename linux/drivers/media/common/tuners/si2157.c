@@ -402,7 +402,10 @@ static int si2157_get_rf_strength(struct dvb_frontend *fe, u16 *strength)
 	if (ret)
 		goto err;
 
-	*strength = (256 - cmd.args[3]) * (0xffff/100);
+	if (*strength)
+		 *strength = 256 - cmd.args[3];
+	else
+	    *strength = (256 - cmd.args[3]) * (0xffff/100);
 	return 0;
 err:
 	dprintk_err("%s: failed=%d\n", __func__, ret);

@@ -11,4 +11,4 @@ EXTRA_CFLAGS += -Idrivers/media/dvb/frontends/
 EXTRA_CFLAGS += -Idrivers/media/common/tuners/
 
 # For the staging CI driver cxd2099
-EXTRA_CFLAGS += -Idrivers/staging/cxd2099/
+EXTRA_CFLAGS += -Idrivers/media/staging/cxd2099/

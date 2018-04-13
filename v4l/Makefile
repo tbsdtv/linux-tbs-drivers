@@ -151,8 +151,8 @@ EXTRA_CFLAGS	+= $(SNAPSHOT_CFLAGS)
 endif
 
 PWD		:= $(shell pwd)
-DEST		:= /lib/modules/$(KERNELRELEASE)/v4l2
-KDIR26		:= /lib/modules/$(KERNELRELEASE)/kernel/drivers/media
+DEST		:= /lib/modules/$(KERNELRELEASE)/extra/v4l2
+KDIR26		:= /lib/modules/$(KERNELRELEASE)/extra/media
 
 #################################################
 # Compiler fixup rules
@@ -255,7 +255,6 @@ links::
 	@echo creating symbolic links...
 	@find ../linux/drivers/media -name '*.[ch]' -type f -print0 | xargs -0n 255 ln -sf --target-directory=.
 	@find ../linux/sound -name '*.[ch]' -type f -print0 | xargs -0n 255 ln -sf --target-directory=.
-	@find ../linux/drivers/staging -name '*.[ch]' -type f -print0 | xargs -0n 255 ln -sf --target-directory=.
 
 config-compat.h:: $(obj)/.version .myconfig scripts/make_config_compat.pl
 	perl scripts/make_config_compat.pl $(SRCDIR) $(obj)/.myconfig $(obj)/config-compat.h

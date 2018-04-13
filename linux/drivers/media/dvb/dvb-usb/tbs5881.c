@@ -40,7 +40,7 @@ static int dvb_usb_tbs5881_debug;
 module_param_named(debug, dvb_usb_tbs5881_debug, int, 0644);
 MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." 
 							DVB_USB_DEBUG_STATUS);
-static unsigned int si2168 = 1;
+static unsigned int si2168 = 0;
 module_param(si2168, int, 0644);
 MODULE_PARM_DESC(si2168, "Enable open-source Si2157/2168 drivers: default 0");
 
@@ -463,7 +463,7 @@ static struct si2157_config si2157_cfg = {
 
 static struct si2168_config si2168_cfg = {
 	.i2c_addr = 0x64,
-	.ts_mode = SI2168_TS_PARALLEL,
+	.ts_mode = SI2168_TS_SERIAL,
 };
 
 static struct i2c_algorithm tbs5881_i2c_algo = {

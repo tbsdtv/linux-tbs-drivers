@@ -20,6 +20,18 @@ static int debug;
 module_param(debug, int, 0644);
 MODULE_PARM_DESC(debug, "Turn on/off debugging (default:off).");
 
+/* define how SNR measurement is reported */
+static int esno;
+module_param(esno, int, 0644);
+MODULE_PARM_DESC(esno, "SNR is reported in 0:Percentage, "\
+	"1:(EsNo dB)*10 (default:0)");
+
+/* define how signal measurement is reported */
+static int dbm;
+module_param(dbm, int, 0644);
+MODULE_PARM_DESC(dbm, "Signal is reported in 0:Percentage, "\
+	"1:-1*dBm (default:0)");
+
 #define dprintk(args...) \
 	do { \
 		if (debug) \
@@ -92,7 +104,7 @@ static int si2168_cmd_execute(struct si2168_state *state,
 
 	if (cmd->rlen) {
 		/* wait cmd execution terminate */
-		#define TIMEOUT 70
+		#define TIMEOUT 500
 		timeout = jiffies + msecs_to_jiffies(TIMEOUT);
 		while (!time_after(jiffies, timeout)) {
 			ret = si2168_i2c_master_recv(state, cmd->args,
@@ -112,12 +124,6 @@ static int si2168_cmd_execute(struct si2168_state *state,
 		dprintk("%s: cmd execution took %d ms\n", __func__,
 				jiffies_to_msecs(jiffies) -
 				(jiffies_to_msecs(timeout) - TIMEOUT));
-
-		/* error bit set? */
-		if ((cmd->args[0] >> 6) & 0x01) {
-			ret = -EREMOTEIO;
-			goto err;
-		}
 
 		if (!((cmd->args[0] >> 7) & 0x01)) {
 			ret = -ETIMEDOUT;
@@ -158,7 +164,6 @@ err:
 static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 {
 	struct si2168_state *state = fe->demodulator_priv;
-	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
 	int ret;
 	struct si2168_cmd cmd;
 
@@ -169,7 +174,7 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		goto err;
 	}
 
-	switch (c->delivery_system) {
+	switch (state->delivery_system) {
 	case SYS_DVBT:
 		memcpy(cmd.args, "\xa0\x01", 2);
 		cmd.wlen = 2;
@@ -179,6 +184,11 @@ static int si2168_read_status(struct dvb_frontend *fe, enum fe_status *status)
 		memcpy(cmd.args, "\x90\x01", 2);
 		cmd.wlen = 2;
 		cmd.rlen = 9;
+		break;
+	case SYS_DVBC_ANNEX_B:
+		memcpy(cmd.args, "\x98\x01", 2);
+		cmd.wlen = 2;
+		cmd.rlen = 10;
 		break;
 	case SYS_DVBT2:
 		memcpy(cmd.args, "\x50\x01", 2);
@@ -223,10 +233,9 @@ err:
 
 static int si2168_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
 {
-	struct si2168_state *state = fe->demodulator_priv;
 	int ret;
 
-	*strength = 0;
+	*strength = dbm;
 
 	if (fe->ops.tuner_ops.get_rf_strength) {
 		ret = fe->ops.tuner_ops.get_rf_strength(fe,strength);
@@ -244,7 +253,10 @@ static int si2168_read_snr(struct dvb_frontend *fe, u16 *snr)
 {
 	struct si2168_state *state = fe->demodulator_priv;
 
-	*snr = state->snr * (0xffff/400) *2;
+	if (esno)
+		*snr = state->snr/2 * 5;
+	else
+		*snr = state->snr * (0xffff/400) *2;
 
 	return 0;
 }
@@ -252,19 +264,47 @@ static int si2168_read_snr(struct dvb_frontend *fe, u16 *snr)
 static int si2168_read_ber(struct dvb_frontend *fe, u32 *ber)
 {
 	struct si2168_state *state = fe->demodulator_priv;
+	int ret;
+	struct si2168_cmd cmd;
 
-	*ber = 1;
+	if (state->fe_status & FE_HAS_LOCK) {
+		memcpy(cmd.args, "\x82\x00", 2);
+		cmd.wlen = 2;
+		cmd.rlen = 3;
+		ret = si2168_cmd_execute(state, &cmd);
+		if (ret)
+			goto err;
+		if (cmd.args[1])
+			*ber = (u32)cmd.args[2]/10;
+		else *ber = 1;
+	} else *ber = 1;
 
 	return 0;
+err:
+	dprintk_err("%s: failed=%d\n", __func__, ret);
+	return ret;
 }
 
 static int si2168_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
 {
 	struct si2168_state *state = fe->demodulator_priv;
+	int ret;
+	struct si2168_cmd cmd;
 
-	*ucblocks = 0;
+	if (state->fe_status & FE_HAS_LOCK) {
+		memcpy(cmd.args, "\x84\x00", 2);
+		cmd.wlen = 2;
+		cmd.rlen = 3;
+		ret = si2168_cmd_execute(state, &cmd);
+		if (ret)
+			goto err;
+		*ucblocks = (u32)cmd.args[2] * cmd.args[1] & 0xf;
+	} else *ucblocks = 1;
 
 	return 0;
+err:
+	dprintk_err("%s: failed=%d\n", __func__, ret);
+	return ret;
 }
 
 static int si2168_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_parameters *dfp)
@@ -286,11 +326,20 @@ static int si2168_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_para
 	}
 
 	switch (c->delivery_system) {
+	case SYS_DVBC_ANNEX_B:
+		delivery_system = 0x10;
+		break;
 	case SYS_DVBT:
 		delivery_system = 0x20;
 		break;
 	case SYS_DVBC_ANNEX_A:
 		delivery_system = 0x30;
+		if (c->symbol_rate < 6000000)
+		{
+			delivery_system = 0x10;
+			c->delivery_system = SYS_DVBC_ANNEX_B;
+			c->bandwidth_hz = 6000000;
+		}
 		break;
 	case SYS_DVBT2:
 		delivery_system = 0x70;
@@ -329,19 +378,6 @@ static int si2168_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_para
 	memcpy(cmd.args, "\x88\x02\x02\x02\x02", 5);
 	cmd.wlen = 5;
 	cmd.rlen = 5;
-	ret = si2168_cmd_execute(state, &cmd);
-	if (ret)
-		goto err;
-
-	/* that has no big effect */
-	if (c->delivery_system == SYS_DVBT)
-		memcpy(cmd.args, "\x89\x21\x06\x11\xff\x98", 6);
-	else if (c->delivery_system == SYS_DVBC_ANNEX_A)
-		memcpy(cmd.args, "\x89\x21\x06\x11\x89\xf0", 6);
-	else if (c->delivery_system == SYS_DVBT2)
-		memcpy(cmd.args, "\x89\x21\x06\x11\x89\x20", 6);
-	cmd.wlen = 6;
-	cmd.rlen = 3;
 	ret = si2168_cmd_execute(state, &cmd);
 	if (ret)
 		goto err;
@@ -404,6 +440,16 @@ static int si2168_set_frontend(struct dvb_frontend *fe, struct dvb_frontend_para
 	/* set DVB-C symbol rate */
 	if (c->delivery_system == SYS_DVBC_ANNEX_A) {
 		memcpy(cmd.args, "\x14\x00\x02\x11", 4);
+		cmd.args[4] = ((c->symbol_rate / 1000) >> 0) & 0xff;
+		cmd.args[5] = ((c->symbol_rate / 1000) >> 8) & 0xff;
+		cmd.wlen = 6;
+		cmd.rlen = 4;
+		ret = si2168_cmd_execute(state, &cmd);
+		if (ret)
+			goto err;
+	}
+	else if (c->delivery_system == SYS_DVBC_ANNEX_B) {
+		memcpy(cmd.args, "\x14\x00\x02\x16", 4);
 		cmd.args[4] = ((c->symbol_rate / 1000) >> 0) & 0xff;
 		cmd.args[5] = ((c->symbol_rate / 1000) >> 8) & 0xff;
 		cmd.wlen = 6;
@@ -622,6 +668,50 @@ static int si2168_init(struct dvb_frontend *fe)
 	dprintk_info("firmware version: %c.%c.%d\n",
 			cmd.args[6], cmd.args[7], cmd.args[8]);
 
+	/* TER FEF */
+	memcpy(cmd.args, "\x51\x00", 2);
+	cmd.wlen = 2;
+	cmd.rlen = 12;
+	cmd.args[1] = (state->fef_inv & 1) << 3 | (state->fef_pin & 7);
+	
+	ret = si2168_cmd_execute(state, &cmd);
+	if (ret)
+		goto err;
+
+	/* MP DEFAULTS */
+	memcpy(cmd.args, "\x88\x01\x01\x01\x01", 5);
+	cmd.wlen = 5;
+	cmd.rlen = 2;
+	switch (state->fef_pin)
+	{
+	case SI2168_MP_A:
+		cmd.args[1] = state->fef_inv ? 3 : 2;
+		break;
+	case SI2168_MP_B:
+		cmd.args[2] = state->fef_inv ? 3 : 2;
+		break;
+	case SI2168_MP_C:
+		cmd.args[3] = state->fef_inv ? 3 : 2;
+		break;
+	case SI2168_MP_D:
+		cmd.args[4] = state->fef_inv ? 3 : 2;
+		break;
+	}
+	
+	ret = si2168_cmd_execute(state, &cmd);
+	if (ret)
+		goto err;
+
+	/* AGC */
+	memcpy(cmd.args, "\x89\x01\x06\x12\x00\x00", 6);
+	cmd.wlen = 6;
+	cmd.rlen = 3;
+	cmd.args[1] |= (state->agc_inv & 1) << 7 | (state->agc_pin & 7) << 4;
+
+	ret = si2168_cmd_execute(state, &cmd);
+	if (ret)
+		goto err;
+
 	/* set ts mode */
 	memcpy(cmd.args, "\x14\x00\x01\x10\x10\x00", 6);
 	cmd.args[4] |= state->ts_mode;
@@ -752,6 +842,13 @@ struct dvb_frontend *si2168_attach(const struct si2168_config *config,
 	state->ts_clock_inv = config->ts_clock_inv;
 	state->ts_clock_gapped = config->ts_clock_gapped;
 	state->fw_loaded = false;
+	state->fef_pin = config->fef_pin;
+	state->fef_inv = config->fef_inv;
+	state->agc_pin = config->agc_pin;
+	state->agc_inv = config->agc_inv;
+
+	if (!state->agc_pin) state->agc_pin = SI2168_MP_A;
+	if (!state->fef_pin) state->fef_pin = SI2168_MP_B;
 
 	/* create dvb_frontend */
 	memcpy(&state->frontend.ops, &si2168_ops,

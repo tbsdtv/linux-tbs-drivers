@@ -158,6 +158,8 @@ static int videobuf_dma_init_user_locked(struct videobuf_dmabuf *dma,
 	unsigned long first, last;
 	int err, rw = 0;
 
+	unsigned int flags = FOLL_FORCE;
+
 	dma->direction = direction;
 	switch (dma->direction) {
 	case DMA_FROM_DEVICE:
@@ -179,13 +181,27 @@ static int videobuf_dma_init_user_locked(struct videobuf_dmabuf *dma,
 	if (NULL == dma->pages)
 		return -ENOMEM;
 
+	if (rw == READ)
+		flags |= FOLL_WRITE;
+
 	dprintk(1, "init user [0x%lx+0x%lx => %d pages]\n",
 		data, size, dma->nr_pages);
 
-	err = get_user_pages(current, current->mm,
+	#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
+			err = get_user_pages(current, current->mm,
 			     data & PAGE_MASK, dma->nr_pages,
 			     rw == READ, 1, /* force */
 			     dma->pages, NULL);
+	#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
+			err = get_user_pages(data & PAGE_MASK, dma->nr_pages,
+			     rw == READ, 1, /* force */
+			     dma->pages,NULL);
+	
+	#else
+		 	err = get_user_pages(data & PAGE_MASK, dma->nr_pages,
+			     flags, dma->pages, NULL);
+	#endif
+
 
 	if (err != dma->nr_pages) {
 		dma->nr_pages = (err >= 0) ? err : 0;
@@ -317,7 +333,13 @@ int videobuf_dma_free(struct videobuf_dmabuf *dma)
 
 	if (dma->pages) {
 		for (i = 0; i < dma->nr_pages; i++)
-			page_cache_release(dma->pages[i]);
+			#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
+				page_cache_release(dma->pages[i]);
+			#else
+				release_pages(dma->pages,i,true);
+			#endif			
+		
+			
 		kfree(dma->pages);
 		dma->pages = NULL;
 	}
@@ -389,15 +411,24 @@ static void videobuf_vm_close(struct vm_area_struct *vma)
 static int videobuf_vm_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 	struct page *page;
-
-	dprintk(3, "fault: fault @ %08lx [vma %08lx-%08lx]\n",
-		(unsigned long)vmf->virtual_address,
-		vma->vm_start, vma->vm_end);
+	
+	#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
+		dprintk(3, "fault: fault @ %08lx [vma %08lx-%08lx]\n",  (unsigned long)vmf->virtual_address,vma->vm_start, vma->vm_end);
+	#else
+		dprintk(3, "fault: fault @ %08lx [vma %08lx-%08lx]\n", vmf->address,vma->vm_start, vma->vm_end);
+	#endif
 
 	page = alloc_page(GFP_USER | __GFP_DMA32);
 	if (!page)
 		return VM_FAULT_OOM;
-	clear_user_highpage(page, (unsigned long)vmf->virtual_address);
+	
+        #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 10, 0)
+                clear_user_highpage(page, (unsigned long)vmf->virtual_address);
+        #else
+                clear_user_highpage(page, vmf->address);
+        #endif
+
+
 	vmf->page = page;
 
 	return 0;

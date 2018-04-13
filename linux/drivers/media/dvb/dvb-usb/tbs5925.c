@@ -167,7 +167,6 @@ static void tbs5925_led_ctrl(struct dvb_frontend *fe, int offon)
 	if (offon)
 		msg.buf = led_on;
 	i2c_transfer(&udev_adap->dev->i2c_adap, &msg, 1);
-	info("tbs5925_led_ctrl %d",offon);
 }
 
 static struct stv090x_config stv0900_config = {

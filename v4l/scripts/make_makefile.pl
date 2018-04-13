@@ -32,7 +32,7 @@ sub check_line($$$)
 		# It's a file, add it to list of files to install
 		s/\.o$/.ko/;
 		my $idir = $dir;
-		$idir =~ s|^../linux/drivers/media/?||;
+		$idir =~ s|^../linux/drivers/media||;
 		$instdir{$idir}{$_} = 1;
 		$count++;
 	}
@@ -204,7 +204,7 @@ getobsolete();
 open OUT, '>Makefile.media' or die 'Unable to write Makefile.media';
 open_makefile('../linux/drivers/media/Makefile');
 
-find({wanted => \&parse_dir, no_chdir => 1}, '../linux/drivers/staging');
+find({wanted => \&parse_dir, no_chdir => 1}, '../linux/drivers/media/staging');
 
 # Creating Install rule
 print OUT "media-install::\n";
@@ -215,6 +215,15 @@ removeubuntu("kernel/ubuntu/lirc");
 removeubuntu("/updates/dkms");
 
 print OUT "\t\@echo \"Installing kernel modules under \$(DESTDIR)\$(KDIR26)/:\"\n";
+
+# change source dirs (relative to v4l dir)
+# into install dirs  (relative to DESTDIR/KDIR26)
+while (my ($dir, $files) = each %srcdir) {
+	my $idir = $dir;
+	$idir =~ s|\.\./linux/drivers/|../|;
+	$idir =~ s|\.\./media/?||;
+	$instdir{$idir} = $files;
+}
 
 while (my ($dir, $files) = each %instdir) {
 	print OUT "\t\@n=0;for i in ", join(' ', keys %$files), ";do ";

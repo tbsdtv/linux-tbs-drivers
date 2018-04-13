@@ -168,7 +168,6 @@ static void tbsqbox2_led_ctrl(struct dvb_frontend *fe, int offon)
 	if (offon)
 		msg.buf = led_on;
 	i2c_transfer(&udev_adap->dev->i2c_adap, &msg, 1);
-	info("tbsqbox2_led_ctrl %d",offon);
 }
 
 static struct stv090x_config earda_config = {
