@@ -188,10 +188,17 @@ static int videobuf_dma_init_user_locked(struct videobuf_dmabuf *dma,
 		data, size, dma->nr_pages);
 
 	#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 168)
+			err = get_user_pages(current, current->mm,
+			     data & PAGE_MASK, dma->nr_pages,
+			     flags,
+			     dma->pages, NULL);
+	#else
 			err = get_user_pages(current, current->mm,
 			     data & PAGE_MASK, dma->nr_pages,
 			     rw == READ, 1, /* force */
 			     dma->pages, NULL);
+	#endif
 	#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 			err = get_user_pages(data & PAGE_MASK, dma->nr_pages,
 			     rw == READ, 1, /* force */
