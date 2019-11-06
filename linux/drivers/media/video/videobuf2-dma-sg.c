@@ -152,8 +152,15 @@ static void *vb2_dma_sg_get_userptr(void *alloc_ctx, unsigned long vaddr,
 
 	down_read(&current->mm->mmap_sem);
 
-
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 168)
+			num_pages_from_user = get_user_pages(current, current->mm,
+								 vaddr & PAGE_MASK,
+								 buf->sg_desc.num_pages,
+								 flags,
+								 buf->pages,
+								 NULL);
+#else
 			num_pages_from_user = get_user_pages(current, current->mm,
 								 vaddr & PAGE_MASK,
 								 buf->sg_desc.num_pages,
@@ -161,7 +168,7 @@ static void *vb2_dma_sg_get_userptr(void *alloc_ctx, unsigned long vaddr,
 								 1, /* force */
 								 buf->pages,
 								 NULL);
-
+#endif
 #elif  LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 			num_pages_from_user = get_user_pages(vaddr & PAGE_MASK,
 								 buf->sg_desc.num_pages,

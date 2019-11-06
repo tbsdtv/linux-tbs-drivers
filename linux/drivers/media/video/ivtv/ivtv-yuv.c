@@ -77,7 +77,11 @@ static int ivtv_yuv_prep_user_dma(struct ivtv *itv, struct ivtv_user_dma *dma,
 	/* Get user pages for DMA Xfer */
 	down_read(&current->mm->mmap_sem);
 	#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
-	y_pages = get_user_pages(current, current->mm, y_dma.uaddr, y_dma.page_count, 0, 1, &dma->map[0], NULL);
+	#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 168)
+		y_pages = get_user_pages(current, current->mm, y_dma.uaddr, y_dma.page_count, FOLL_FORCE, &dma->map[0], NULL);
+	#else
+		y_pages = get_user_pages(current, current->mm, y_dma.uaddr, y_dma.page_count, 0, 1, &dma->map[0], NULL);
+	#endif
 	#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
                 y_pages = get_user_pages(y_dma.uaddr, y_dma.page_count, 0, 1, &dma->map[0], NULL);
 	#else
@@ -88,10 +92,15 @@ static int ivtv_yuv_prep_user_dma(struct ivtv *itv, struct ivtv_user_dma *dma,
 	if (y_pages == y_dma.page_count) {
 
 		#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 6, 0)
+		#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 168)
+			uv_pages = get_user_pages(current, current->mm,
+					  uv_dma.uaddr, uv_dma.page_count, FOLL_FORCE,
+					  &dma->map[y_pages], NULL);
+		#else
 			uv_pages = get_user_pages(current, current->mm,
 					  uv_dma.uaddr, uv_dma.page_count, 0, 1,
 					  &dma->map[y_pages], NULL);
-
+		#endif
 		#elif LINUX_VERSION_CODE < KERNEL_VERSION(4, 9, 0)
 			uv_pages = get_user_pages(uv_dma.uaddr, uv_dma.page_count, 0, 1,
 					  &dma->map[y_pages], NULL);
