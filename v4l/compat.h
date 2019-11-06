@@ -501,7 +501,9 @@ static inline int dummy_algo_control(struct i2c_adapter *adapter,
 #endif
 
 #ifdef NEED_BITOPS
+#ifndef BIT
 #define BIT(x)  (1UL<<((x)%BITS_PER_LONG))
+#endif
 #endif
 
 #ifndef PCI_DEVICE_ID_MARVELL_88ALP01_CCIC
