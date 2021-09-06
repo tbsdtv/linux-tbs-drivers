@@ -151,8 +151,8 @@ EXTRA_CFLAGS	+= $(SNAPSHOT_CFLAGS)
 endif
 
 PWD		:= $(shell pwd)
-DEST		:= /lib/modules/$(KERNELRELEASE)/extra/v4l2
-KDIR26		:= /lib/modules/$(KERNELRELEASE)/extra/media
+DEST		:= /lib/modules/$(KERNELRELEASE)/updates/extra/v4l2
+KDIR26		:= /lib/modules/$(KERNELRELEASE)/updates/extra/media
 
 #################################################
 # Compiler fixup rules
